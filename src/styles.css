@@ -511,7 +511,7 @@ h1 {
 .battle-scene {
   position: relative;
   margin-top: 24px;
-  padding: 24px 18px 0;
+  padding: 24px 18px 18px;
   border-radius: 34px;
   background:
     radial-gradient(circle at top, rgba(244, 114, 23, 0.18), transparent 22%),
@@ -529,6 +529,7 @@ h1 {
   border-radius: inherit;
   background:
     radial-gradient(circle at 50% 18%, rgba(239, 68, 68, 0.16), transparent 12%),
+    radial-gradient(circle at 50% 64%, rgba(245, 158, 11, 0.08), transparent 18%),
     linear-gradient(180deg, transparent 58%, rgba(11, 17, 25, 0.74) 100%);
   pointer-events: none;
 }
@@ -540,7 +541,7 @@ h1 {
 .monster-stage {
   position: relative;
   z-index: 1;
-  max-width: 560px;
+  max-width: 620px;
   margin: 0 auto;
   text-align: center;
 }
@@ -642,7 +643,7 @@ h1 {
 
 .monster-boss-card {
   margin-top: 18px;
-  padding: 22px;
+  padding: 22px 24px 26px;
   border-radius: 30px;
   border: 1px solid rgba(232, 206, 146, 0.42);
   background:
@@ -652,6 +653,7 @@ h1 {
   box-shadow:
     inset 0 0 0 1px rgba(255, 237, 201, 0.1),
     0 20px 40px rgba(3, 8, 13, 0.3);
+  transform: perspective(900px) translateZ(0) scale(1.02);
 }
 
 .monster-boss-card strong {
@@ -723,12 +725,13 @@ h1 {
 .battlefield-lane {
   position: relative;
   z-index: 1;
-  max-width: 760px;
-  margin: 28px auto 0;
+  max-width: 880px;
+  margin: 18px auto 0;
 }
 
 .battle-heading {
   margin-bottom: 14px;
+  align-items: center;
 }
 
 .field-row {
@@ -736,13 +739,16 @@ h1 {
   align-items: stretch;
   justify-content: center;
   gap: 14px;
-  min-height: 180px;
-  padding: 18px;
-  border-radius: 28px;
+  min-height: 190px;
+  padding: 28px 18px 12px;
+  border-radius: 34px;
   background:
-    linear-gradient(180deg, rgba(24, 35, 46, 0.7), rgba(12, 18, 25, 0.82));
+    radial-gradient(circle at center top, rgba(255, 201, 102, 0.08), transparent 22%),
+    linear-gradient(180deg, rgba(24, 35, 46, 0.72), rgba(12, 18, 25, 0.86));
   border: 1px solid rgba(116, 146, 164, 0.16);
-  box-shadow: inset 0 0 40px rgba(4, 9, 13, 0.28);
+  box-shadow:
+    inset 0 0 40px rgba(4, 9, 13, 0.28),
+    inset 0 -28px 50px rgba(6, 10, 16, 0.42);
 }
 
 .card-grid {
@@ -795,9 +801,17 @@ h1 {
 }
 
 .field-card {
-  width: min(220px, 100%);
-  flex: 0 0 220px;
-  transform: translateY(calc(var(--field-index, 0) * 4px));
+  width: min(240px, 100%);
+  flex: 0 0 240px;
+  min-height: 250px;
+  transform:
+    translateY(calc(var(--field-index, 0) * 6px - 20px))
+    perspective(900px)
+    rotateX(6deg);
+}
+
+.field-card.just-played {
+  animation: card-lunge 540ms cubic-bezier(0.2, 0.85, 0.2, 1);
 }
 
 .battle-card-type,
@@ -866,17 +880,14 @@ h1 {
 }
 
 .hand-dock {
-  position: sticky;
-  bottom: 0;
+  position: relative;
   z-index: 3;
-  margin-top: 26px;
-  margin-inline: -18px;
-  padding: 16px 18px calc(env(safe-area-inset-bottom, 0px) + 14px);
-  border-top: 1px solid rgba(125, 101, 60, 0.28);
+  margin-top: 18px;
+  padding: 14px 0 0;
+  border-top: 1px solid rgba(125, 101, 60, 0.2);
   background:
-    linear-gradient(180deg, rgba(9, 14, 20, 0.12), rgba(7, 11, 16, 0.96) 22%),
-    rgba(7, 11, 16, 0.92);
-  backdrop-filter: blur(14px);
+    linear-gradient(180deg, rgba(9, 14, 20, 0), rgba(7, 11, 16, 0.4) 22%),
+    transparent;
 }
 
 .hand-hud {
@@ -892,39 +903,94 @@ h1 {
   position: relative;
   display: flex;
   justify-content: center;
-  align-items: end;
-  gap: 0;
-  max-width: 860px;
+  align-items: stretch;
+  gap: 12px;
+  max-width: 920px;
   margin: 0 auto;
-  padding: 10px 0 0;
+  padding: 8px 0 0;
   overflow-x: auto;
   overflow-y: visible;
+  scroll-snap-type: x proximity;
 }
 
 .hand-card {
-  width: 170px;
-  flex: 0 0 170px;
-  margin-left: -26px;
-  transform-origin: bottom center;
+  width: 100%;
+  max-width: 210px;
+  min-height: 124px;
+  flex: 0 0 210px;
+  padding: 14px 16px;
+  scroll-snap-align: center;
+  transform-origin: center bottom;
   transform:
-    translateY(calc((var(--card-count, 1) - var(--card-index, 0) - 1) * 2px))
-    rotate(calc((var(--card-index, 0) - ((var(--card-count, 1) - 1) / 2)) * 3deg));
-}
-
-.hand-card:first-child {
-  margin-left: 0;
+    translateY(calc((var(--card-count, 1) - var(--card-index, 0) - 1) * 1px))
+    perspective(800px)
+    rotateX(10deg);
 }
 
 .hand-card:hover {
   z-index: 5;
   transform:
-    translateY(-18px)
-    rotate(calc((var(--card-index, 0) - ((var(--card-count, 1) - 1) / 2)) * 1.5deg))
+    translateY(-10px)
+    perspective(800px)
+    rotateX(0deg)
     scale(1.04);
+}
+
+.hand-card-inner {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.hand-card-copy {
+  min-width: 0;
+}
+
+.hand-card-copy .battle-card-topline {
+  gap: 8px;
+}
+
+.hand-card-copy strong {
+  margin-top: 8px;
+  font-size: 0.95rem;
+}
+
+.hand-card-copy small {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.hand-card-art {
+  margin-top: 0;
+  font-size: 2rem;
+}
+
+.hand-card .battle-card-action {
+  margin-top: 10px;
+  font-size: 0.78rem;
 }
 
 .hand-empty {
   width: 100%;
+}
+
+@keyframes card-lunge {
+  0% {
+    opacity: 0;
+    transform: translateY(92px) scale(0.8) perspective(900px) rotateX(20deg);
+  }
+
+  70% {
+    opacity: 1;
+    transform: translateY(-28px) scale(1.05) perspective(900px) rotateX(0deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(calc(var(--field-index, 0) * 6px - 20px)) perspective(900px) rotateX(6deg);
+  }
 }
 
 .board-track {
@@ -1117,8 +1183,16 @@ h1 {
   .field-card {
     width: 100%;
     flex: 1 1 auto;
-    margin-left: 0;
     transform: none;
+  }
+
+  .hand-card {
+    max-width: none;
+    min-height: 132px;
+  }
+
+  .hand-card-inner {
+    grid-template-columns: 46px minmax(0, 1fr);
   }
 
   .hand-card:hover {

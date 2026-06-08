@@ -430,14 +430,14 @@ function BattleBoard({
 
         <section className="battlefield-lane">
           <div className="section-heading battle-heading">
-            <h2>Battlefield</h2>
-            <span>{fieldCards.length} cards in play</span>
+            <h2>Played Cards</h2>
+            <span>{fieldCards.length} cards striking the monster</span>
           </div>
           <div className="field-row">
             {fieldCards.length === 0 ? (
               <article className="battle-empty field-empty">
-                <strong>No cards on the field</strong>
-                <span>Play a card from your hand to strike the monster.</span>
+                <strong>No cards in play yet</strong>
+                <span>Pick a card from your hand and it will leap forward into the attack lane.</span>
               </article>
             ) : (
               fieldCards.map((card, index) => (
@@ -456,7 +456,7 @@ function BattleBoard({
                     ⚔️
                   </div>
                   <strong>{card.title}</strong>
-                  <small>Already dealt damage. Tap to pull it back to hand.</small>
+                  <small>{card.flavor}</small>
                   <span className="battle-card-action">Recall to hand</span>
                 </button>
               ))
@@ -494,15 +494,19 @@ function BattleBoard({
                   }
                   type="button"
                 >
-                  <div className="battle-card-topline">
-                    <span className="battle-card-type">{card.family} card</span>
-                    <span className="battle-stat-chip">{card.cardPower} dmg</span>
+                  <div className="hand-card-inner">
+                    <div className="battle-card-art hand-card-art" aria-hidden="true">
+                      {card.family === 'daily' ? '💧' : card.family === 'side' ? '🗡️' : '👑'}
+                    </div>
+                    <div className="hand-card-copy">
+                      <div className="battle-card-topline">
+                        <span className="battle-card-type">{card.family} card</span>
+                        <span className="battle-stat-chip">{card.cardPower} dmg</span>
+                      </div>
+                      <strong>{card.title}</strong>
+                      <small>{card.flavor}</small>
+                    </div>
                   </div>
-                  <div className="battle-card-art" aria-hidden="true">
-                    {card.family === 'daily' ? '💧' : card.family === 'side' ? '🗡️' : '👑'}
-                  </div>
-                  <strong>{card.title}</strong>
-                  <small>{card.flavor}</small>
                   <span className="battle-card-action">Play to field</span>
                 </button>
               ))
