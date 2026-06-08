@@ -1120,6 +1120,19 @@ h1 {
 }
 
 @media (max-width: 520px) {
+  .shell {
+    padding: 18px 14px 28px;
+  }
+
+  .board-shell {
+    padding-bottom: 28px;
+  }
+
+  .board-hero {
+    position: relative;
+    top: auto;
+  }
+
   .quest-card-header,
   .quest-card-footer,
   .task-card {
@@ -1153,10 +1166,15 @@ h1 {
     width: 100%;
   }
 
+  .battle-scene {
+    margin-top: 18px;
+    padding: 18px 12px 14px;
+    border-radius: 26px;
+  }
+
   .monster-stage-topbar,
   .monster-intent-row,
-  .hand-hud,
-  .field-row {
+  .hand-hud {
     align-items: stretch;
     flex-direction: column;
   }
@@ -1167,36 +1185,151 @@ h1 {
     flex-direction: column;
   }
 
+  .monster-stage {
+    max-width: none;
+  }
+
+  .monster-boss-card {
+    margin-top: 14px;
+    padding: 16px 16px 18px;
+    border-radius: 22px;
+  }
+
+  .monster-boss-card strong {
+    font-size: 1.05rem;
+  }
+
+  .monster-boss-card small,
+  .battle-stats,
+  .battle-stat-chip,
+  .intent-badge {
+    font-size: 0.74rem;
+  }
+
+  .monster-boss-art {
+    margin-top: 10px;
+    font-size: 3rem;
+  }
+
+  .monster-bar {
+    height: 10px;
+    margin-top: 10px;
+  }
+
+  .battlefield-lane {
+    margin-top: 14px;
+  }
+
+  .battle-heading {
+    margin-bottom: 10px;
+  }
+
+  .battle-heading h2 {
+    font-size: 1.35rem;
+  }
+
+  .field-row,
+  .hand-fan {
+    justify-content: start;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .field-row {
+    min-height: 118px;
+    padding: 10px 8px 6px;
+    border-radius: 22px;
+    flex-direction: row;
+    align-items: stretch;
+    flex-wrap: nowrap;
+  }
+
   .hand-dock {
     position: relative;
     bottom: auto;
     margin-inline: 0;
-    border-radius: 28px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-radius: 22px;
   }
 
-  .hand-fan {
-    gap: 12px;
-    justify-content: start;
+  .battle-card,
+  .battle-empty {
+    border-radius: 18px;
   }
 
-  .hand-card,
-  .field-card {
-    width: 100%;
-    flex: 1 1 auto;
+  .hand-dock {
+    border-radius: 22px;
+  }
+
+  .field-card,
+  .hand-card {
+    width: auto;
+    flex: 0 0 156px;
+    min-height: 96px;
+    padding: 10px 10px 9px;
     transform: none;
+    scroll-snap-align: start;
+  }
+
+  .field-card {
+    min-height: 150px;
   }
 
   .hand-card {
     max-width: none;
-    min-height: 132px;
   }
 
   .hand-card-inner {
-    grid-template-columns: 46px minmax(0, 1fr);
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .hand-card-copy .battle-card-topline,
+  .field-card .battle-card-topline {
+    gap: 4px;
+  }
+
+  .hand-card-copy strong,
+  .field-card strong,
+  .battle-empty strong {
+    margin-top: 4px;
+    font-size: 0.88rem;
+  }
+
+  .hand-card-copy small,
+  .field-card small,
+  .battle-empty span {
+    margin-top: 4px;
+    font-size: 0.68rem;
+    line-height: 1.25;
+  }
+
+  .battle-card-type,
+  .battle-card-action {
+    font-size: 0.64rem;
+    letter-spacing: 0.08em;
+  }
+
+  .battle-card-action {
+    margin-top: 8px;
+  }
+
+  .battle-stat-chip {
+    padding: 4px 7px;
+  }
+
+  .hand-card-art,
+  .field-card .battle-card-art {
+    margin-top: 0;
+    font-size: 1.4rem;
   }
 
   .hand-card:hover {
-    transform: translateY(-8px) scale(1.01);
+    transform: translateY(-4px) scale(1.01);
   }
 }
 
