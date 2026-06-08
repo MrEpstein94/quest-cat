@@ -481,6 +481,12 @@ h1 {
   border: 1px solid rgba(93, 125, 142, 0.32);
 }
 
+.monster-arena {
+  margin-top: 22px;
+  text-align: center;
+}
+
+.monster-header,
 .monster-copy {
   display: flex;
   align-items: end;
@@ -488,19 +494,57 @@ h1 {
   gap: 12px;
 }
 
+.monster-header {
+  align-items: center;
+}
+
+.monster-label,
 .monster-copy strong,
 .monster-copy span {
   display: block;
+}
+
+.monster-label {
+  color: #f6c76e;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .monster-copy strong {
   color: #fff7dc;
 }
 
+.monster-header strong,
+.monster-copy strong {
+  color: #fff7dc;
+}
+
+.monster-status {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(7, 17, 24, 0.34);
+  color: #ffd8cf;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.monster-status.is-victory {
+  color: #fff7dc;
+  background: rgba(217, 119, 6, 0.28);
+}
+
 .monster-copy span {
   color: #aabecb;
   font-size: 0.82rem;
   text-align: right;
+}
+
+.monster-boss-art {
+  margin-top: 18px;
+  font-size: clamp(3rem, 12vw, 5rem);
+  line-height: 1;
 }
 
 .monster-bar {
@@ -516,6 +560,92 @@ h1 {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, #f97316 0%, #ef4444 100%);
+}
+
+.battle-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  color: #d9e5ec;
+  font-size: 0.84rem;
+}
+
+.reset-button {
+  margin-top: 16px;
+}
+
+.card-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.battle-card,
+.battle-empty {
+  border-radius: 24px;
+  padding: 18px;
+}
+
+.battle-card {
+  position: relative;
+  border: 1px solid rgba(93, 125, 142, 0.32);
+  background:
+    radial-gradient(circle at top right, rgba(246, 199, 110, 0.22), transparent 28%),
+    linear-gradient(155deg, rgba(19, 37, 47, 0.98), rgba(36, 57, 73, 0.96));
+  color: #f8fafc;
+  text-align: left;
+  box-shadow: 0 20px 36px rgba(3, 8, 13, 0.24);
+}
+
+.battle-card.is-played {
+  background:
+    radial-gradient(circle at top right, rgba(248, 113, 113, 0.2), transparent 28%),
+    linear-gradient(155deg, rgba(56, 38, 31, 0.98), rgba(88, 50, 40, 0.96));
+}
+
+.battle-card-type,
+.battle-card small,
+.battle-card-action,
+.battle-empty span {
+  display: block;
+}
+
+.battle-card-type {
+  color: #f6c76e;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.battle-card strong,
+.battle-empty strong {
+  display: block;
+  margin-top: 12px;
+  font-size: 1.08rem;
+}
+
+.battle-card small {
+  margin-top: 10px;
+  color: #d8e3eb;
+}
+
+.battle-card-action {
+  margin-top: 18px;
+  color: #fff7dc;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.battle-empty {
+  border: 1px dashed rgba(147, 170, 182, 0.3);
+  background: rgba(10, 25, 34, 0.5);
+}
+
+.battle-empty span {
+  margin-top: 8px;
+  color: #aabecb;
+  font-size: 0.9rem;
 }
 
 .board-track {
@@ -623,13 +753,20 @@ h1 {
 
   .quest-content,
   .card-actions,
-  .monster-copy {
+  .monster-copy,
+  .monster-header,
+  .battle-stats {
     align-items: stretch;
     flex-direction: column;
   }
 
   .mini-stepper {
     justify-content: space-between;
+  }
+
+  .monster-status,
+  .reset-button {
+    width: 100%;
   }
 }
 
