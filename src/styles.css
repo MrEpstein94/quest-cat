@@ -1328,25 +1328,28 @@ h1 {
   .field-card,
   .hand-card {
     width: auto;
-    flex: 1 1 calc(33.333% - 6px);
+    flex: 1 1 calc(50% - 5px);
     min-width: 0;
-    max-width: calc(33.333% - 6px);
+    max-width: calc(50% - 5px);
     min-height: 96px;
     padding: 8px 8px 8px;
     transform: none;
   }
 
   .field-card {
+    flex: 1 1 calc(33.333% - 6px);
+    max-width: calc(33.333% - 6px);
     min-height: 138px;
   }
 
   .hand-card {
     max-width: none;
+    min-height: 88px;
   }
 
   .hand-card-inner {
-    grid-template-columns: 34px minmax(0, 1fr);
-    gap: 8px;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 6px;
   }
 
   .hand-card-copy .battle-card-topline,
@@ -1369,6 +1372,10 @@ h1 {
     line-height: 1.25;
   }
 
+  .hand-card-copy small {
+    font-size: 0.58rem;
+  }
+
   .battle-card-type,
   .battle-card-action {
     font-size: 0.64rem;
@@ -1387,6 +1394,10 @@ h1 {
   .field-card .battle-card-art {
     margin-top: 0;
     font-size: 1.15rem;
+  }
+
+  .hand-card-art {
+    font-size: 1rem;
   }
 
   .hand-card:hover {
