@@ -31,6 +31,12 @@ select {
   font: inherit;
 }
 
+button,
+input,
+textarea {
+  font-family: inherit;
+}
+
 .shell {
   max-width: 460px;
   margin: 0 auto;
@@ -204,12 +210,39 @@ h1 {
 .task-card {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 14px;
   padding: 18px;
   border-radius: 22px;
   background: #f7eddf;
   color: #1e293b;
   box-shadow: 0 14px 30px rgba(8, 14, 19, 0.18);
+}
+
+.task-card.is-complete,
+.goal-card.is-complete {
+  opacity: 0.88;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.quest-check-row {
+  align-items: flex-start;
+}
+
+.check-row input,
+.objective-check input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #f59e0b;
+  flex: 0 0 auto;
 }
 
 .task-marker {
@@ -226,6 +259,7 @@ h1 {
 
 .task-copy {
   flex: 1;
+  min-width: 0;
 }
 
 .task-copy strong,
@@ -269,10 +303,10 @@ h1 {
   line-height: 1.45;
 }
 
-.objective-list li::before {
-  content: "•";
-  margin-right: 8px;
-  color: #f6c76e;
+.objective-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 .reward-pill {
@@ -291,6 +325,74 @@ h1 {
   font-size: 0.9rem;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.quest-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.ghost-button {
+  border: 1px solid rgba(159, 178, 191, 0.26);
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: rgba(7, 17, 24, 0.28);
+  color: #d9e5ec;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.danger-button {
+  color: #ffc6bf;
+}
+
+.quest-form {
+  margin-top: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(19, 37, 47, 0.72);
+  border: 1px solid rgba(93, 125, 142, 0.24);
+  display: grid;
+  gap: 12px;
+}
+
+.quest-form h3 {
+  margin: 0;
+  color: #fff7dc;
+  font-size: 1rem;
+}
+
+.quest-form input,
+.quest-form textarea {
+  width: 100%;
+  border: 1px solid rgba(147, 170, 182, 0.2);
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: rgba(7, 17, 24, 0.45);
+  color: #f8fafc;
+}
+
+.quest-form textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+
+.quest-form input::placeholder,
+.quest-form textarea::placeholder {
+  color: #8da3b2;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.form-button {
+  margin-top: 0;
 }
 
 .primary-button {
@@ -316,6 +418,23 @@ h1 {
   text-align: center;
   font-size: 0.85rem;
   line-height: 1.5;
+}
+
+@media (max-width: 520px) {
+  .quest-card-header,
+  .quest-card-footer,
+  .task-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ghost-button {
+    width: 100%;
+  }
 }
 
 @media (min-width: 700px) {
