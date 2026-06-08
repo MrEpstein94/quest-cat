@@ -59,6 +59,10 @@ textarea {
   box-shadow: 0 22px 50px rgba(3, 8, 13, 0.34);
 }
 
+.hero-action {
+  margin-top: 18px;
+}
+
 .rank-panel {
   margin-top: 18px;
   padding: 16px 18px;
@@ -224,6 +228,24 @@ h1 {
   opacity: 0.88;
 }
 
+.quest-content,
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.quest-content {
+  flex: 1;
+  min-width: 0;
+  justify-content: space-between;
+}
+
+.card-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .check-row {
   display: flex;
   align-items: center;
@@ -349,6 +371,21 @@ h1 {
   color: #ffc6bf;
 }
 
+.mini-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(30, 41, 59, 0.08);
+}
+
+.mini-stepper span {
+  min-width: 20px;
+  text-align: center;
+  font-weight: 800;
+}
+
 .quest-form {
   margin-top: 14px;
   padding: 18px;
@@ -420,6 +457,154 @@ h1 {
   line-height: 1.5;
 }
 
+.board-shell {
+  max-width: 560px;
+}
+
+.board-hero {
+  position: sticky;
+  top: 8px;
+  z-index: 2;
+}
+
+.back-button {
+  margin-bottom: 16px;
+}
+
+.monster-card {
+  margin-bottom: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.2), transparent 35%),
+    rgba(19, 37, 47, 0.88);
+  border: 1px solid rgba(93, 125, 142, 0.32);
+}
+
+.monster-copy {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.monster-copy strong,
+.monster-copy span {
+  display: block;
+}
+
+.monster-copy strong {
+  color: #fff7dc;
+}
+
+.monster-copy span {
+  color: #aabecb;
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.monster-bar {
+  height: 14px;
+  margin-top: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(63, 88, 102, 0.72);
+}
+
+.monster-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f97316 0%, #ef4444 100%);
+}
+
+.board-track {
+  display: grid;
+  gap: 14px;
+}
+
+.board-space,
+.board-finish {
+  position: relative;
+  padding: 18px;
+  border-radius: 24px;
+  text-align: left;
+}
+
+.board-space {
+  border: 1px solid rgba(93, 125, 142, 0.3);
+  background:
+    linear-gradient(135deg, rgba(19, 37, 47, 0.98), rgba(31, 57, 70, 0.94)),
+    rgba(19, 37, 47, 0.88);
+  color: #f8fafc;
+  box-shadow: 0 18px 34px rgba(3, 8, 13, 0.22);
+}
+
+.board-space.is-complete {
+  background:
+    linear-gradient(135deg, rgba(123, 92, 27, 0.95), rgba(184, 115, 29, 0.95)),
+    rgba(19, 37, 47, 0.88);
+}
+
+.board-space.has-avatar {
+  border-color: rgba(246, 199, 110, 0.8);
+}
+
+.board-step-number,
+.board-space small {
+  display: block;
+}
+
+.board-step-number {
+  color: #f6c76e;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.board-space strong {
+  margin-top: 10px;
+  display: block;
+  font-size: 1.05rem;
+}
+
+.board-space small {
+  margin-top: 8px;
+  color: #d8e3eb;
+}
+
+.board-avatar {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  font-size: 1.4rem;
+}
+
+.board-finish {
+  border: 1px dashed rgba(246, 199, 110, 0.48);
+  background: rgba(10, 25, 34, 0.7);
+}
+
+.board-finish span,
+.board-finish strong {
+  display: block;
+}
+
+.board-finish span {
+  color: #f6c76e;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.board-finish strong {
+  margin-top: 10px;
+  color: #fff7dc;
+  font-size: 1.1rem;
+}
+
 @media (max-width: 520px) {
   .quest-card-header,
   .quest-card-footer,
@@ -434,6 +619,17 @@ h1 {
 
   .ghost-button {
     width: 100%;
+  }
+
+  .quest-content,
+  .card-actions,
+  .monster-copy {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mini-stepper {
+    justify-content: space-between;
   }
 }
 
