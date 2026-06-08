@@ -63,6 +63,10 @@ textarea {
   margin-top: 18px;
 }
 
+.home-hero {
+  text-align: center;
+}
+
 .rank-panel {
   margin-top: 18px;
   padding: 16px 18px;
@@ -209,6 +213,59 @@ h1 {
 .card-stack {
   display: grid;
   gap: 12px;
+}
+
+.hub-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.hub-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 24px;
+  color: #f8fafc;
+}
+
+.hub-card strong,
+.hub-card small {
+  position: relative;
+  z-index: 1;
+}
+
+.hub-card strong {
+  font-size: 1.2rem;
+}
+
+.hub-card small {
+  color: #d8e3eb;
+  line-height: 1.45;
+}
+
+.hub-actions,
+.builder-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hub-actions .ghost-button,
+.builder-toggle-row .ghost-button {
+  flex: 1 1 150px;
+}
+
+.compact-button {
+  margin-top: 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  font-size: 0.92rem;
+}
+
+.ghost-button.is-selected {
+  border-color: rgba(246, 199, 110, 0.62);
+  background: rgba(245, 158, 11, 0.14);
+  color: #fff1cc;
 }
 
 .task-card {
@@ -1232,10 +1289,13 @@ h1 {
   .hand-fan {
     justify-content: start;
     gap: 8px;
-    overflow-x: auto;
-    overflow-y: visible;
-    padding-bottom: 4px;
+    overflow: visible;
+    padding-bottom: 0;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .hand-fan {
+    flex-wrap: wrap;
   }
 
   .field-row {
@@ -1244,7 +1304,7 @@ h1 {
     border-radius: 22px;
     flex-direction: row;
     align-items: stretch;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
   }
 
   .hand-dock {
@@ -1268,15 +1328,16 @@ h1 {
   .field-card,
   .hand-card {
     width: auto;
-    flex: 0 0 156px;
+    flex: 1 1 calc(33.333% - 6px);
+    min-width: 0;
+    max-width: calc(33.333% - 6px);
     min-height: 96px;
-    padding: 10px 10px 9px;
+    padding: 8px 8px 8px;
     transform: none;
-    scroll-snap-align: start;
   }
 
   .field-card {
-    min-height: 150px;
+    min-height: 138px;
   }
 
   .hand-card {
@@ -1297,14 +1358,14 @@ h1 {
   .field-card strong,
   .battle-empty strong {
     margin-top: 4px;
-    font-size: 0.88rem;
+    font-size: 0.8rem;
   }
 
   .hand-card-copy small,
   .field-card small,
   .battle-empty span {
     margin-top: 4px;
-    font-size: 0.68rem;
+    font-size: 0.62rem;
     line-height: 1.25;
   }
 
@@ -1325,7 +1386,7 @@ h1 {
   .hand-card-art,
   .field-card .battle-card-art {
     margin-top: 0;
-    font-size: 1.4rem;
+    font-size: 1.15rem;
   }
 
   .hand-card:hover {

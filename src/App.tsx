@@ -523,6 +523,7 @@ export default function App() {
   const [dailyQuests, setDailyQuests] = useState(initialState.dailyQuests);
   const [sideQuests, setSideQuests] = useState(initialState.sideQuests);
   const [mainQuests, setMainQuests] = useState(initialState.mainQuests);
+  const [builderMode, setBuilderMode] = useState<'daily' | 'side' | 'main' | null>('daily');
   const [selectedBoard, setSelectedBoard] = useState<BoardSelection | null>(null);
   const [lastPlayedId, setLastPlayedId] = useState<string | null>(null);
   const [hitCount, setHitCount] = useState(0);
@@ -550,6 +551,8 @@ export default function App() {
   }, [dailyQuests, sideQuests, mainQuests]);
 
   const completedCount = dailyQuests.filter((quest) => isDailyQuestComplete(quest)).length;
+  const completedSideCount = sideQuests.filter((quest) => quest.done).length;
+  const completedMainCount = mainQuests.filter((quest) => quest.done).length;
   const earnedXp = dailyQuests
     .filter((quest) => isDailyQuestComplete(quest))
     .reduce((total, quest) => total + quest.xp, 0);
@@ -863,43 +866,136 @@ export default function App() {
 
   return (
     <main className="shell">
-      <section className="hero-card">
-        <p className="eyebrow">TODAY&apos;S ADVENTURE</p>
+      <section className="hero-card home-hero">
+        <p className="eyebrow">QUEST MENU</p>
         <h1>Quest Cat</h1>
         <p className="hero-copy">
-          Every quest type can now open as a card battle. Build your hand, play cards to the field,
-          and watch the monster card lose health.
+          Just Daily Quest, Side Quest, and Main Quest. Open a battle or build new cards and quests.
         </p>
+      </section>
 
-        <div className="hero-stats">
-          <article className="stat-card">
-            <span className="stat-value">Lv. {rankProgress.level}</span>
-            <span className="stat-label">{rankProgress.rankTitle}</span>
+      <section className="section">
+        <div className="hub-grid">
+          <article className="game-card hub-card">
+            <span className="battle-card-type">Daily Quest</span>
+            <strong>Routine Deck</strong>
+            <small>
+              {completedCount} / {dailyQuests.length} complete · {dailyQuests.length} cards
+            </small>
+            <div className="hub-actions">
+              <button className="primary-button compact-button" onClick={() => setSelectedBoard({ kind: 'daily' })} type="button">
+                Open Daily Quest
+              </button>
+              <button className="ghost-button" onClick={() => setBuilderMode('daily')} type="button">
+                Add Cards to Deck
+              </button>
+            </div>
           </article>
-          <article className="stat-card">
-            <span className="stat-value">{earnedXp} XP</span>
-            <span className="stat-label">Earned Today</span>
+
+          <article className="game-card hub-card">
+            <span className="battle-card-type">Side Quest</span>
+            <strong>Optional Battles</strong>
+            <small>
+              {completedSideCount} / {sideQuests.length} complete · {sideQuestXp} total XP
+            </small>
+            <div className="hub-actions">
+              <button
+                className="primary-button compact-button"
+                onClick={() => sideQuests[0] && setSelectedBoard({ kind: 'side', questId: sideQuests[0].id })}
+                type="button"
+              >
+                Open Side Quest
+              </button>
+              <button className="ghost-button" onClick={() => setBuilderMode('side')} type="button">
+                Create New Quest
+              </button>
+            </div>
+          </article>
+
+          <article className="game-card hub-card">
+            <span className="battle-card-type">Main Quest</span>
+            <strong>Story Boss Runs</strong>
+            <small>
+              {completedMainCount} / {mainQuests.length} complete · {mainQuests.length} quest arcs
+            </small>
+            <div className="hub-actions">
+              <button
+                className="primary-button compact-button"
+                onClick={() => mainQuests[0] && setSelectedBoard({ kind: 'main', questId: mainQuests[0].id })}
+                type="button"
+              >
+                Open Main Quest
+              </button>
+              <button className="ghost-button" onClick={() => setBuilderMode('main')} type="button">
+                Create New Quest
+              </button>
+            </div>
           </article>
         </div>
+      </section>
 
-        <section className="rank-panel" aria-label="Rank progress">
-          <div className="rank-copy">
-            <strong>Rank Progress</strong>
-            <span>
-              {rankProgress.currentLevelXp} / {rankProgress.nextLevelXp} XP to next level
-            </span>
-          </div>
-          <div className="rank-bar" aria-hidden="true">
-            <span style={{ width: `${rankProgress.progressPercent}%` }} />
-          </div>
-          <p className="rank-note">
-            Open any quest category and play cards from your hand to the battlefield.
-          </p>
-        </section>
+      <section className="section">
+        <div className="section-heading">
+          <h2>Deck Builder</h2>
+          <span>
+            Lv. {rankProgress.level} · {earnedXp} XP earned · {rankProgress.currentLevelXp} / {rankProgress.nextLevelXp} XP
+          </span>
+        </div>
 
-        <button className="primary-button hero-action" onClick={() => setSelectedBoard({ kind: 'daily' })} type="button">
-          Open Daily Card Battle
-        </button>
+        <div className="builder-toggle-row">
+          <button className={`ghost-button ${builderMode === 'daily' ? 'is-selected' : ''}`} onClick={() => setBuilderMode('daily')} type="button">
+            Add Daily Cards
+          </button>
+          <button className={`ghost-button ${builderMode === 'side' ? 'is-selected' : ''}`} onClick={() => setBuilderMode('side')} type="button">
+            New Side Quest
+          </button>
+          <button className={`ghost-button ${builderMode === 'main' ? 'is-selected' : ''}`} onClick={() => setBuilderMode('main')} type="button">
+            New Main Quest
+          </button>
+        </div>
+
+        {builderMode === 'daily' ? (
+          <form className="quest-form" onSubmit={addDailyQuest}>
+            <h3>Add Daily Card Deck</h3>
+            <input onChange={(event) => setDailyTitle(event.target.value)} placeholder="Routine title" value={dailyTitle} />
+            <div className="form-grid">
+              <input min="0" onChange={(event) => setDailyXp(event.target.value)} placeholder="XP reward" type="number" value={dailyXp} />
+              <input min="1" onChange={(event) => setDailyTarget(event.target.value)} placeholder="Number of cards" type="number" value={dailyTarget} />
+            </div>
+            <input min="1" onChange={(event) => setDailyPower(event.target.value)} placeholder="Damage per card" type="number" value={dailyPower} />
+            <button className="primary-button form-button" type="submit">
+              Add Daily Card Deck
+            </button>
+          </form>
+        ) : null}
+
+        {builderMode === 'side' ? (
+          <form className="quest-form" onSubmit={addSideQuest}>
+            <h3>Add Side Quest</h3>
+            <input onChange={(event) => setSideTitle(event.target.value)} placeholder="Quest title" value={sideTitle} />
+            <div className="form-grid">
+              <input min="0" onChange={(event) => setSideXp(event.target.value)} placeholder="XP reward" type="number" value={sideXp} />
+              <input onChange={(event) => setSideDifficulty(event.target.value)} placeholder="Difficulty" value={sideDifficulty} />
+            </div>
+            <input onChange={(event) => setSideReward(event.target.value)} placeholder="Reward" value={sideReward} />
+            <textarea onChange={(event) => setSideObjectives(event.target.value)} placeholder={'One sub quest per line\nExample: Buy groceries'} rows={4} value={sideObjectives} />
+            <button className="primary-button form-button" type="submit">
+              Add Side Quest
+            </button>
+          </form>
+        ) : null}
+
+        {builderMode === 'main' ? (
+          <form className="quest-form" onSubmit={addMainQuest}>
+            <h3>Add Main Quest</h3>
+            <input onChange={(event) => setMainTitle(event.target.value)} placeholder="Main quest title" value={mainTitle} />
+            <input onChange={(event) => setMainReward(event.target.value)} placeholder="Reward" value={mainReward} />
+            <textarea onChange={(event) => setMainObjectives(event.target.value)} placeholder={'One sub quest per line\nExample: Finish onboarding flow'} rows={4} value={mainObjectives} />
+            <button className="primary-button form-button" type="submit">
+              Add Main Quest
+            </button>
+          </form>
+        ) : null}
       </section>
 
       <section className="section">
@@ -944,18 +1040,6 @@ export default function App() {
           ))}
         </div>
 
-        <form className="quest-form" onSubmit={addDailyQuest}>
-          <h3>Add Daily Card Deck</h3>
-          <input onChange={(event) => setDailyTitle(event.target.value)} placeholder="Routine title" value={dailyTitle} />
-          <div className="form-grid">
-            <input min="0" onChange={(event) => setDailyXp(event.target.value)} placeholder="XP reward" type="number" value={dailyXp} />
-            <input min="1" onChange={(event) => setDailyTarget(event.target.value)} placeholder="Number of cards" type="number" value={dailyTarget} />
-          </div>
-          <input min="1" onChange={(event) => setDailyPower(event.target.value)} placeholder="Damage per card" type="number" value={dailyPower} />
-          <button className="primary-button form-button" type="submit">
-            Add Daily Card Deck
-          </button>
-        </form>
       </section>
 
       <section className="section">
@@ -1002,19 +1086,6 @@ export default function App() {
           })}
         </div>
 
-        <form className="quest-form" onSubmit={addSideQuest}>
-          <h3>Add Side Quest</h3>
-          <input onChange={(event) => setSideTitle(event.target.value)} placeholder="Quest title" value={sideTitle} />
-          <div className="form-grid">
-            <input min="0" onChange={(event) => setSideXp(event.target.value)} placeholder="XP reward" type="number" value={sideXp} />
-            <input onChange={(event) => setSideDifficulty(event.target.value)} placeholder="Difficulty" value={sideDifficulty} />
-          </div>
-          <input onChange={(event) => setSideReward(event.target.value)} placeholder="Reward" value={sideReward} />
-          <textarea onChange={(event) => setSideObjectives(event.target.value)} placeholder={'One sub quest per line\nExample: Buy groceries'} rows={4} value={sideObjectives} />
-          <button className="primary-button form-button" type="submit">
-            Add Side Quest
-          </button>
-        </form>
       </section>
 
       <section className="section">
@@ -1061,15 +1132,6 @@ export default function App() {
           })}
         </div>
 
-        <form className="quest-form" onSubmit={addMainQuest}>
-          <h3>Add Main Quest</h3>
-          <input onChange={(event) => setMainTitle(event.target.value)} placeholder="Main quest title" value={mainTitle} />
-          <input onChange={(event) => setMainReward(event.target.value)} placeholder="Reward" value={mainReward} />
-          <textarea onChange={(event) => setMainObjectives(event.target.value)} placeholder={'One sub quest per line\nExample: Finish onboarding flow'} rows={4} value={mainObjectives} />
-          <button className="primary-button form-button" type="submit">
-            Add Main Quest
-          </button>
-        </form>
       </section>
 
       <section className="install-tip" aria-label="Install instructions">
