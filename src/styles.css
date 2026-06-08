@@ -228,6 +228,40 @@ h1 {
   opacity: 0.88;
 }
 
+.game-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(232, 206, 146, 0.42);
+  background:
+    radial-gradient(circle at top left, rgba(255, 233, 182, 0.18), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(186, 113, 36, 0.18), transparent 26%),
+    linear-gradient(160deg, rgba(25, 37, 49, 0.98), rgba(48, 64, 79, 0.96));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 237, 201, 0.08),
+    0 20px 40px rgba(3, 8, 13, 0.24);
+}
+
+.game-card::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 18px;
+  border: 1px solid rgba(246, 199, 110, 0.16);
+  pointer-events: none;
+}
+
+.list-card {
+  color: #f8fafc;
+}
+
+.list-card strong,
+.list-card small,
+.list-card .reward-pill,
+.list-card .objective-list li {
+  position: relative;
+  z-index: 1;
+}
+
 .quest-content,
 .card-actions {
   display: flex;
@@ -292,7 +326,7 @@ h1 {
 
 .task-copy small {
   margin-top: 5px;
-  color: #8d5f31;
+  color: #d8e3eb;
   font-size: 0.82rem;
 }
 
@@ -486,6 +520,10 @@ h1 {
   text-align: center;
 }
 
+.monster-arena.is-hit .monster-boss-card {
+  animation: monster-hit 360ms ease;
+}
+
 .monster-header,
 .monster-copy {
   display: flex;
@@ -547,6 +585,47 @@ h1 {
   line-height: 1;
 }
 
+.monster-mood {
+  margin-top: 8px;
+  color: #d8e3eb;
+  font-size: 0.88rem;
+}
+
+.monster-boss-card {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 26px;
+  border: 1px solid rgba(232, 206, 146, 0.42);
+  background:
+    radial-gradient(circle at top left, rgba(255, 205, 96, 0.18), transparent 22%),
+    radial-gradient(circle at center right, rgba(239, 68, 68, 0.2), transparent 30%),
+    linear-gradient(160deg, rgba(69, 23, 20, 0.98), rgba(116, 38, 28, 0.94));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 237, 201, 0.1),
+    0 20px 40px rgba(3, 8, 13, 0.3);
+}
+
+.monster-boss-topline,
+.battle-card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.battle-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(7, 17, 24, 0.34);
+  color: #fff1cc;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .monster-bar {
   height: 14px;
   margin-top: 14px;
@@ -588,19 +667,39 @@ h1 {
 
 .battle-card {
   position: relative;
-  border: 1px solid rgba(93, 125, 142, 0.32);
+  overflow: hidden;
+  border: 1px solid rgba(232, 206, 146, 0.42);
   background:
-    radial-gradient(circle at top right, rgba(246, 199, 110, 0.22), transparent 28%),
+    radial-gradient(circle at top left, rgba(255, 233, 182, 0.18), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(186, 113, 36, 0.18), transparent 26%),
     linear-gradient(155deg, rgba(19, 37, 47, 0.98), rgba(36, 57, 73, 0.96));
   color: #f8fafc;
   text-align: left;
-  box-shadow: 0 20px 36px rgba(3, 8, 13, 0.24);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 237, 201, 0.08),
+    0 20px 36px rgba(3, 8, 13, 0.24);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
+}
+
+.battle-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 237, 201, 0.1),
+    0 24px 42px rgba(3, 8, 13, 0.28);
 }
 
 .battle-card.is-played {
   background:
-    radial-gradient(circle at top right, rgba(248, 113, 113, 0.2), transparent 28%),
+    radial-gradient(circle at top left, rgba(255, 210, 168, 0.18), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(248, 113, 113, 0.22), transparent 28%),
     linear-gradient(155deg, rgba(56, 38, 31, 0.98), rgba(88, 50, 40, 0.96));
+}
+
+.battle-card.just-played {
+  animation: card-land 420ms ease;
 }
 
 .battle-card-type,
@@ -625,6 +724,12 @@ h1 {
   font-size: 1.08rem;
 }
 
+.battle-card-art {
+  margin-top: 16px;
+  font-size: 2.1rem;
+  line-height: 1;
+}
+
 .battle-card small {
   margin-top: 10px;
   color: #d8e3eb;
@@ -646,6 +751,10 @@ h1 {
   margin-top: 8px;
   color: #aabecb;
   font-size: 0.9rem;
+}
+
+.battle-zone {
+  min-height: 140px;
 }
 
 .board-track {
@@ -735,6 +844,45 @@ h1 {
   font-size: 1.1rem;
 }
 
+@keyframes card-land {
+  0% {
+    transform: translateY(34px) scale(0.92);
+    opacity: 0;
+  }
+
+  65% {
+    transform: translateY(-6px) scale(1.02);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes monster-hit {
+  0% {
+    transform: translateX(0) scale(1);
+    filter: brightness(1);
+  }
+
+  25% {
+    transform: translateX(-6px) scale(1.01);
+    filter: brightness(1.15);
+  }
+
+  50% {
+    transform: translateX(7px) scale(0.99);
+    filter: brightness(0.92);
+  }
+
+  100% {
+    transform: translateX(0) scale(1);
+    filter: brightness(1);
+  }
+}
+
 @media (max-width: 520px) {
   .quest-card-header,
   .quest-card-footer,
@@ -767,6 +915,12 @@ h1 {
   .monster-status,
   .reset-button {
     width: 100%;
+  }
+
+  .monster-boss-topline,
+  .battle-card-topline {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 

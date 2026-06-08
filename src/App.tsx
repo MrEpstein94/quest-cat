@@ -26,7 +26,7 @@ type Quest = {
 };
 
 type BoardSelection =
-  | { kind: 'daily-battle' }
+  | { kind: 'daily' }
   | { kind: 'side'; questId: string }
   | { kind: 'main'; questId: string };
 
@@ -36,15 +36,27 @@ type AppState = {
   mainQuests: Quest[];
 };
 
-type DailyBattleCard = {
+type BattleCard = {
   id: string;
-  questId: string;
+  originId: string;
   title: string;
   cardPower: number;
   played: boolean;
+  flavor: string;
+  family: 'daily' | 'side' | 'main';
 };
 
-const STORAGE_KEY = 'quest-cat-state-v3';
+type BattleState = {
+  title: string;
+  subtitle: string;
+  monsterName: string;
+  monsterMood: string;
+  totalHp: number;
+  currentHp: number;
+  cards: BattleCard[];
+};
+
+const STORAGE_KEY = 'quest-cat-state-v4';
 
 const rankTitles = [
   'Tiny Paws',
@@ -145,6 +157,18 @@ function getDailyProgressLabel(quest: DailyQuest) {
   return `${quest.progressCount} / ${quest.targetCount} cards played`;
 }
 
+function getQuestCompletion(quest: Quest) {
+  const objectiveCount = quest.objectives.length;
+  const completedObjectives = quest.objectives.filter((objective) => objective.done).length;
+
+  return {
+    completedObjectives,
+    objectiveCount,
+    progressLabel:
+      objectiveCount === 0 ? 'No sub quests yet' : `${completedObjectives} / ${objectiveCount} cards played`,
+  };
+}
+
 function getXpRequiredForLevel(level: number) {
   return 60 + (level - 1) * 30;
 }
@@ -172,18 +196,6 @@ function getRankProgress(total: number) {
   };
 }
 
-function getQuestCompletion(quest: Quest) {
-  const objectiveCount = quest.objectives.length;
-  const completedObjectives = quest.objectives.filter((objective) => objective.done).length;
-
-  return {
-    objectiveCount,
-    completedObjectives,
-    progressLabel:
-      objectiveCount === 0 ? 'No sub quests yet' : `${completedObjectives} / ${objectiveCount} sub quests`,
-  };
-}
-
 function buildInitialState(): AppState {
   return {
     dailyQuests: defaultDailyQuests,
@@ -197,11 +209,7 @@ function normalizeDailyQuest(
 ) {
   const targetCount = Math.max(1, Number(quest.targetCount ?? 1));
   const fallbackProgress = quest.done ? targetCount : 0;
-  const progressCount = clampCount(
-    Number(quest.progressCount ?? fallbackProgress),
-    0,
-    targetCount,
-  );
+  const progressCount = clampCount(Number(quest.progressCount ?? fallbackProgress), 0, targetCount);
 
   return {
     id: quest.id ?? createId('daily'),
@@ -209,7 +217,7 @@ function normalizeDailyQuest(
     xp: Number(quest.xp ?? 10),
     targetCount,
     progressCount,
-    cardPower: Math.max(1, Number(quest.cardPower ?? quest.xp ?? 3)),
+    cardPower: Math.max(1, Number(quest.cardPower ?? 3)),
   };
 }
 
@@ -225,8 +233,7 @@ function normalizeQuest(quest: Partial<Quest>) {
   const objectives = Array.isArray(quest.objectives)
     ? quest.objectives.map(normalizeObjective)
     : [];
-  const done =
-    objectives.length > 0 ? objectives.every((objective) => objective.done) : Boolean(quest.done);
+  const done = objectives.length > 0 ? objectives.every((objective) => objective.done) : Boolean(quest.done);
 
   return {
     id: quest.id ?? createId('quest'),
@@ -246,6 +253,7 @@ function loadInitialState() {
 
   const savedState =
     window.localStorage.getItem(STORAGE_KEY) ??
+    window.localStorage.getItem('quest-cat-state-v3') ??
     window.localStorage.getItem('quest-cat-state-v2') ??
     window.localStorage.getItem('quest-cat-state-v1');
 
@@ -272,43 +280,98 @@ function loadInitialState() {
   }
 }
 
-function buildDailyBattleCards(quests: DailyQuest[]) {
-  return quests.flatMap<DailyBattleCard>((quest) =>
-    Array.from({ length: quest.targetCount }, (_, index) => ({
-      id: `${quest.id}-card-${index + 1}`,
-      questId: quest.id,
-      title: quest.title,
-      cardPower: quest.cardPower,
-      played: index < quest.progressCount,
-    })),
+function buildBattleState(
+  selection: BoardSelection,
+  dailyQuests: DailyQuest[],
+  sideQuests: Quest[],
+  mainQuests: Quest[],
+): BattleState | null {
+  if (selection.kind === 'daily') {
+    const cards = dailyQuests.flatMap<BattleCard>((quest) =>
+      Array.from({ length: quest.targetCount }, (_, index) => ({
+        id: `${quest.id}-card-${index + 1}`,
+        originId: quest.id,
+        title: quest.title,
+        cardPower: quest.cardPower,
+        played: index < quest.progressCount,
+        flavor: `${quest.cardPower} damage splash`,
+        family: 'daily',
+      })),
+    );
+    const totalHp = cards.reduce((total, card) => total + card.cardPower, 0);
+    const currentHp = Math.max(
+      0,
+      totalHp - cards.filter((card) => card.played).reduce((total, card) => total + card.cardPower, 0),
+    );
+
+    return {
+      title: 'Daily Card Battle',
+      subtitle: 'Play your routine cards from hand onto the battlefield to chip down the monster.',
+      monsterName: currentHp === 0 ? 'Hydra of Habits Defeated' : 'Hydra of Habits',
+      monsterMood: currentHp === 0 ? 'Collapsed under your routine combo.' : 'Still feeding on skipped habits.',
+      totalHp: Math.max(totalHp, 1),
+      currentHp,
+      cards,
+    };
+  }
+
+  const questList = selection.kind === 'side' ? sideQuests : mainQuests;
+  const quest = questList.find((item) => item.id === selection.questId);
+
+  if (!quest) {
+    return null;
+  }
+
+  const cards = quest.objectives.map<BattleCard>((objective, index) => ({
+    id: objective.id,
+    originId: objective.id,
+    title: objective.title,
+    cardPower: Math.max(4, Math.ceil((quest.xp ?? 12) / Math.max(quest.objectives.length, 1)) + index),
+    played: objective.done,
+    flavor: selection.kind === 'side' ? 'Tactical side-quest move' : 'Storyline power move',
+    family: selection.kind,
+  }));
+  const totalHp = cards.reduce((total, card) => total + card.cardPower, 0);
+  const currentHp = Math.max(
+    0,
+    totalHp - cards.filter((card) => card.played).reduce((total, card) => total + card.cardPower, 0),
   );
+
+  return {
+    title: quest.title,
+    subtitle: quest.reward,
+    monsterName: currentHp === 0 ? `${quest.title} Cleared` : `${quest.title} Boss`,
+    monsterMood: selection.kind === 'side' ? 'A quick skirmish with bonus loot.' : 'A larger boss battle with story stakes.',
+    totalHp: Math.max(totalHp, 1),
+    currentHp,
+    cards,
+  };
 }
 
-function DailyBattleBoard({
-  cards,
-  monsterHp,
-  monsterMaxHp,
-  monsterName,
+function BattleBoard({
+  battleState,
+  hitCount,
+  lastPlayedId,
   onBack,
   onPlayCard,
   onRecallCard,
   onResetBattle,
 }: {
-  cards: DailyBattleCard[];
-  monsterHp: number;
-  monsterMaxHp: number;
-  monsterName: string;
+  battleState: BattleState;
+  hitCount: number;
+  lastPlayedId: string | null;
   onBack: () => void;
   onPlayCard: (cardId: string) => void;
   onRecallCard: (cardId: string) => void;
   onResetBattle: () => void;
 }) {
-  const handCards = cards.filter((card) => !card.played);
-  const playedCards = cards.filter((card) => card.played);
-  const monsterDefeated = monsterHp <= 0;
-  const damageDealt = monsterMaxHp - monsterHp;
-  const healthPercent =
-    monsterMaxHp === 0 ? 100 : Math.max(0, Math.round((monsterHp / monsterMaxHp) * 100));
+  const handCards = battleState.cards.filter((card) => !card.played);
+  const fieldCards = battleState.cards.filter((card) => card.played);
+  const monsterDefeated = battleState.currentHp <= 0;
+  const healthPercent = Math.max(
+    0,
+    Math.round((battleState.currentHp / battleState.totalHp) * 100),
+  );
 
   return (
     <main className="shell board-shell">
@@ -316,35 +379,42 @@ function DailyBattleBoard({
         <button className="ghost-button back-button" onClick={onBack} type="button">
           Back to Quests
         </button>
-        <p className="eyebrow">ROGUELIKE DAILY BATTLE</p>
-        <h1>Card Battle</h1>
-        <p className="hero-copy">
-          Play your routine cards from your hand. Each card hits the monster for its own damage.
-        </p>
+        <p className="eyebrow">CARD BATTLE</p>
+        <h1>{battleState.title}</h1>
+        <p className="hero-copy">{battleState.subtitle}</p>
       </section>
 
-      <section className="monster-card monster-arena" aria-label="Monster arena">
+      <section className={`monster-card monster-arena ${hitCount > 0 ? 'is-hit' : ''}`} aria-label="Monster arena">
         <div className="monster-header">
           <div>
-            <span className="monster-label">Monster</span>
-            <strong>{monsterName}</strong>
+            <span className="monster-label">Monster Card</span>
+            <strong>{battleState.monsterName}</strong>
+            <span className="monster-mood">{battleState.monsterMood}</span>
           </div>
           <span className={`monster-status ${monsterDefeated ? 'is-victory' : ''}`}>
-            {monsterDefeated ? 'Defeated' : `${monsterHp} HP left`}
+            {monsterDefeated ? 'KO' : `${battleState.currentHp} HP`}
           </span>
         </div>
 
-        <div className="monster-boss-art" aria-hidden="true">
-          {monsterDefeated ? '💥' : '👾'}
-        </div>
+        <article className="monster-boss-card" key={hitCount}>
+          <div className="monster-boss-topline">
+            <span className="battle-card-type">Boss</span>
+            <span className="battle-stat-chip">{battleState.totalHp} max HP</span>
+          </div>
+          <div className="monster-boss-art" aria-hidden="true">
+            {monsterDefeated ? '💥' : '👹'}
+          </div>
+          <strong>{battleState.monsterName}</strong>
+          <small>{monsterDefeated ? 'Victory loot unlocked.' : 'Take it down by playing your cards.'}</small>
+        </article>
 
         <div className="monster-bar" aria-hidden="true">
           <span style={{ width: `${healthPercent}%` }} />
         </div>
 
         <div className="battle-stats">
-          <span>{damageDealt} damage dealt</span>
-          <span>{playedCards.length} cards played</span>
+          <span>{battleState.totalHp - battleState.currentHp} damage dealt</span>
+          <span>{fieldCards.length} cards on field</span>
         </div>
 
         <button className="ghost-button reset-button" onClick={onResetBattle} type="button">
@@ -354,27 +424,28 @@ function DailyBattleBoard({
 
       <section className="section">
         <div className="section-heading">
-          <h2>Hand</h2>
-          <span>{handCards.length} cards left</span>
+          <h2>Your Hand</h2>
+          <span>{handCards.length} cards waiting</span>
         </div>
-        <div className="card-grid">
+        <div className="card-grid battle-zone">
           {handCards.length === 0 ? (
             <article className="battle-empty">
-              <strong>No cards left in hand</strong>
-              <span>Play more routines tomorrow or reset this battle.</span>
+              <strong>No cards in hand</strong>
+              <span>Everything playable is already on the battlefield.</span>
             </article>
           ) : (
             handCards.map((card) => (
-              <button
-                className="battle-card"
-                key={card.id}
-                onClick={() => onPlayCard(card.id)}
-                type="button"
-              >
-                <span className="battle-card-type">Routine Card</span>
+              <button className="battle-card game-card" key={card.id} onClick={() => onPlayCard(card.id)} type="button">
+                <div className="battle-card-topline">
+                  <span className="battle-card-type">{card.family} card</span>
+                  <span className="battle-stat-chip">{card.cardPower} dmg</span>
+                </div>
+                <div className="battle-card-art" aria-hidden="true">
+                  {card.family === 'daily' ? '💧' : card.family === 'side' ? '🗡️' : '👑'}
+                </div>
                 <strong>{card.title}</strong>
-                <small>{card.cardPower} damage</small>
-                <span className="battle-card-action">Play Card</span>
+                <small>{card.flavor}</small>
+                <span className="battle-card-action">Play to field</span>
               </button>
             ))
           )}
@@ -383,97 +454,36 @@ function DailyBattleBoard({
 
       <section className="section">
         <div className="section-heading">
-          <h2>Played Cards</h2>
-          <span>{playedCards.length} on the board</span>
+          <h2>Battlefield</h2>
+          <span>{fieldCards.length} cards in play</span>
         </div>
-        <div className="card-grid">
-          {playedCards.length === 0 ? (
+        <div className="card-grid battle-zone">
+          {fieldCards.length === 0 ? (
             <article className="battle-empty">
-              <strong>No cards placed yet</strong>
-              <span>Tap a card from your hand to attack the monster.</span>
+              <strong>No cards on the field</strong>
+              <span>Play a card from your hand to hit the monster.</span>
             </article>
           ) : (
-            playedCards.map((card) => (
+            fieldCards.map((card) => (
               <button
-                className="battle-card is-played"
+                className={`battle-card game-card is-played ${lastPlayedId === card.id ? 'just-played' : ''}`}
                 key={card.id}
                 onClick={() => onRecallCard(card.id)}
                 type="button"
               >
-                <span className="battle-card-type">Played</span>
+                <div className="battle-card-topline">
+                  <span className="battle-card-type">field card</span>
+                  <span className="battle-stat-chip">{card.cardPower} dmg</span>
+                </div>
+                <div className="battle-card-art" aria-hidden="true">
+                  ⚔️
+                </div>
                 <strong>{card.title}</strong>
-                <small>{card.cardPower} damage dealt</small>
-                <span className="battle-card-action">Recall Card</span>
+                <small>Already dealt damage. Tap to pull it back to hand.</small>
+                <span className="battle-card-action">Recall to hand</span>
               </button>
             ))
           )}
-        </div>
-      </section>
-    </main>
-  );
-}
-
-function QuestTrackBoard({
-  onBack,
-  onStepToggle,
-  selection,
-  title,
-  subtitle,
-  steps,
-}: {
-  onBack: () => void;
-  onStepToggle: (stepIndex: number) => void;
-  selection: BoardSelection;
-  title: string;
-  subtitle: string;
-  steps: { id: string; title: string; done: boolean }[];
-}) {
-  const completedSteps = steps.filter((step) => step.done).length;
-  const avatarIndex = steps.length === 0 ? 0 : Math.min(completedSteps, steps.length - 1);
-
-  return (
-    <main className="shell board-shell">
-      <section className="hero-card board-hero">
-        <button className="ghost-button back-button" onClick={onBack} type="button">
-          Back to Quests
-        </button>
-        <p className="eyebrow">
-          {selection.kind === 'side' ? 'SIDE QUEST TRACK' : 'MAIN QUEST TRACK'}
-        </p>
-        <h1>{title}</h1>
-        <p className="hero-copy">{subtitle}</p>
-      </section>
-
-      <section className="section">
-        <div className="section-heading">
-          <h2>Quest Board</h2>
-          <span>
-            {completedSteps} of {steps.length} spaces cleared
-          </span>
-        </div>
-
-        <div className="board-track" aria-label={`${title} game board`}>
-          {steps.map((step, index) => {
-            const isAvatarHere = avatarIndex === index;
-
-            return (
-              <button
-                className={`board-space ${step.done ? 'is-complete' : ''} ${isAvatarHere ? 'has-avatar' : ''}`}
-                key={step.id}
-                onClick={() => onStepToggle(index)}
-                type="button"
-              >
-                <span className="board-step-number">Space {index + 1}</span>
-                <strong>{step.title}</strong>
-                <small>{step.done ? 'Complete' : 'Tap to complete'}</small>
-                {isAvatarHere ? <span className="board-avatar" aria-hidden="true">🐾</span> : null}
-              </button>
-            );
-          })}
-          <div className="board-finish">
-            <span>Finish</span>
-            <strong>Reward Chest</strong>
-          </div>
         </div>
       </section>
     </main>
@@ -486,6 +496,8 @@ export default function App() {
   const [sideQuests, setSideQuests] = useState(initialState.sideQuests);
   const [mainQuests, setMainQuests] = useState(initialState.mainQuests);
   const [selectedBoard, setSelectedBoard] = useState<BoardSelection | null>(null);
+  const [lastPlayedId, setLastPlayedId] = useState<string | null>(null);
+  const [hitCount, setHitCount] = useState(0);
 
   const [dailyTitle, setDailyTitle] = useState('');
   const [dailyXp, setDailyXp] = useState('10');
@@ -517,39 +529,13 @@ export default function App() {
   const totalXp = baseXp + earnedXp;
   const rankProgress = getRankProgress(totalXp);
 
-  const battleCards = useMemo(() => buildDailyBattleCards(dailyQuests), [dailyQuests]);
-  const totalMonsterHp = dailyQuests.reduce(
-    (total, quest) => total + quest.targetCount * quest.cardPower,
-    0,
+  const activeBattle = useMemo(
+    () =>
+      selectedBoard
+        ? buildBattleState(selectedBoard, dailyQuests, sideQuests, mainQuests)
+        : null,
+    [dailyQuests, mainQuests, selectedBoard, sideQuests],
   );
-  const currentMonsterHp = Math.max(
-    0,
-    totalMonsterHp -
-      dailyQuests.reduce((total, quest) => total + quest.progressCount * quest.cardPower, 0),
-  );
-
-  const questBoardDetails = useMemo(() => {
-    if (!selectedBoard || selectedBoard.kind === 'daily-battle') {
-      return null;
-    }
-
-    const questList = selectedBoard.kind === 'side' ? sideQuests : mainQuests;
-    const quest = questList.find((item) => item.id === selectedBoard.questId);
-
-    if (!quest) {
-      return null;
-    }
-
-    return {
-      title: quest.title,
-      subtitle: quest.reward,
-      steps: quest.objectives.map((objective) => ({
-        id: objective.id,
-        title: objective.title,
-        done: objective.done,
-      })),
-    };
-  }, [mainQuests, selectedBoard, sideQuests]);
 
   function addDailyQuest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -661,62 +647,119 @@ export default function App() {
     setMainObjectives('');
   }
 
-  function playDailyCard(cardId: string) {
-    setDailyQuests((current) =>
-      current.map((quest) => {
-        const playableCardIndex = current
-          .filter((item) => item.id === quest.id)
-          .flatMap((item) =>
-            Array.from({ length: item.targetCount }, (_, index) => `${item.id}-card-${index + 1}`),
-          )
-          .findIndex((id) => id === cardId);
-
-        if (!cardId.startsWith(`${quest.id}-card-`) || playableCardIndex === -1) {
-          return quest;
-        }
-
-        return {
-          ...quest,
-          progressCount: clampCount(quest.progressCount + 1, 0, quest.targetCount),
-        };
-      }),
-    );
-  }
-
-  function recallDailyCard(cardId: string) {
-    setDailyQuests((current) =>
-      current.map((quest) => {
-        if (!cardId.startsWith(`${quest.id}-card-`)) {
-          return quest;
-        }
-
-        return {
-          ...quest,
-          progressCount: clampCount(quest.progressCount - 1, 0, quest.targetCount),
-        };
-      }),
-    );
-  }
-
   function setDailyQuestProgress(questId: string, progressCount: number) {
     setDailyQuests((current) =>
       current.map((quest) =>
         quest.id === questId
+          ? { ...quest, progressCount: clampCount(progressCount, 0, quest.targetCount) }
+          : quest,
+      ),
+    );
+  }
+
+  function updateBattleFeedback(cardId: string | null) {
+    setLastPlayedId(cardId);
+    setHitCount((current) => current + 1);
+  }
+
+  function playBattleCard(cardId: string) {
+    if (!selectedBoard) {
+      return;
+    }
+
+    updateBattleFeedback(cardId);
+
+    if (selectedBoard.kind === 'daily') {
+      setDailyQuests((current) =>
+        current.map((quest) =>
+          cardId.startsWith(`${quest.id}-card-`)
+            ? { ...quest, progressCount: clampCount(quest.progressCount + 1, 0, quest.targetCount) }
+            : quest,
+        ),
+      );
+      return;
+    }
+
+    const setter = selectedBoard.kind === 'side' ? setSideQuests : setMainQuests;
+    setter((current) =>
+      current.map((quest) =>
+        quest.id === selectedBoard.questId
           ? {
               ...quest,
-              progressCount: clampCount(progressCount, 0, quest.targetCount),
+              objectives: quest.objectives.map((objective) =>
+                objective.id === cardId ? { ...objective, done: true } : objective,
+              ),
+              done: quest.objectives.every((objective) =>
+                objective.id === cardId ? true : objective.done,
+              ),
             }
           : quest,
       ),
     );
   }
 
-  function resetDailyBattle() {
-    setDailyQuests((current) =>
-      current.map((quest) => ({
-        ...quest,
-        progressCount: 0,
-      })),
+  function recallBattleCard(cardId: string) {
+    if (!selectedBoard) {
+      return;
+    }
+
+    setLastPlayedId(null);
+
+    if (selectedBoard.kind === 'daily') {
+      setDailyQuests((current) =>
+        current.map((quest) =>
+          cardId.startsWith(`${quest.id}-card-`)
+            ? { ...quest, progressCount: clampCount(quest.progressCount - 1, 0, quest.targetCount) }
+            : quest,
+        ),
+      );
+      return;
+    }
+
+    const setter = selectedBoard.kind === 'side' ? setSideQuests : setMainQuests;
+    setter((current) =>
+      current.map((quest) => {
+        if (quest.id !== selectedBoard.questId) {
+          return quest;
+        }
+
+        const objectives = quest.objectives.map((objective) =>
+          objective.id === cardId ? { ...objective, done: false } : objective,
+        );
+
+        return {
+          ...quest,
+          objectives,
+          done: objectives.every((objective) => objective.done),
+        };
+      }),
+    );
+  }
+
+  function resetBattle() {
+    if (!selectedBoard) {
+      return;
+    }
+
+    setLastPlayedId(null);
+    setHitCount(0);
+
+    if (selectedBoard.kind === 'daily') {
+      setDailyQuests((current) => current.map((quest) => ({ ...quest, progressCount: 0 })));
+      return;
+    }
+
+    const setter = selectedBoard.kind === 'side' ? setSideQuests : setMainQuests;
+    setter((current) =>
+      current.map((quest) =>
+        quest.id === selectedBoard.questId
+          ? {
+              ...quest,
+              done: false,
+              objectives: quest.objectives.map((objective) => ({ ...objective, done: false })),
+            }
+          : quest,
+      ),
     );
   }
 
@@ -734,10 +777,7 @@ export default function App() {
           ? {
               ...quest,
               done: !quest.done,
-              objectives: quest.objectives.map((objective) => ({
-                ...objective,
-                done: !quest.done,
-              })),
+              objectives: quest.objectives.map((objective) => ({ ...objective, done: !quest.done })),
             }
           : quest,
       ),
@@ -758,12 +798,11 @@ export default function App() {
         const objectives = quest.objectives.map((objective) =>
           objective.id === objectiveId ? { ...objective, done: !objective.done } : objective,
         );
-        const done = objectives.length > 0 && objectives.every((objective) => objective.done);
 
         return {
           ...quest,
-          done,
           objectives,
+          done: objectives.every((objective) => objective.done),
         };
       }),
     );
@@ -776,60 +815,20 @@ export default function App() {
   ) {
     setter((current) => current.filter((quest) => quest.id !== questId));
     setSelectedBoard((current) =>
-      current?.kind === kind && current.questId === questId ? null : current,
+      current && current.kind === kind && current.questId === questId ? null : current,
     );
   }
 
-  function toggleQuestBoardStep(stepIndex: number) {
-    if (!selectedBoard || selectedBoard.kind === 'daily-battle') {
-      return;
-    }
-
-    const setter = selectedBoard.kind === 'side' ? setSideQuests : setMainQuests;
-    setter((current) =>
-      current.map((quest) => {
-        if (quest.id !== selectedBoard.questId) {
-          return quest;
-        }
-
-        const objectives = quest.objectives.map((objective, index) => ({
-          ...objective,
-          done: index <= stepIndex,
-        }));
-
-        return {
-          ...quest,
-          objectives,
-          done: objectives.every((objective) => objective.done),
-        };
-      }),
-    );
-  }
-
-  if (selectedBoard?.kind === 'daily-battle') {
+  if (selectedBoard && activeBattle) {
     return (
-      <DailyBattleBoard
-        cards={battleCards}
-        monsterHp={currentMonsterHp}
-        monsterMaxHp={Math.max(totalMonsterHp, 1)}
-        monsterName={currentMonsterHp <= 0 ? 'Hydra of Habits Defeated' : 'Hydra of Habits'}
+      <BattleBoard
+        battleState={activeBattle}
+        hitCount={hitCount}
+        lastPlayedId={lastPlayedId}
         onBack={() => setSelectedBoard(null)}
-        onPlayCard={playDailyCard}
-        onRecallCard={recallDailyCard}
-        onResetBattle={resetDailyBattle}
-      />
-    );
-  }
-
-  if (selectedBoard && questBoardDetails) {
-    return (
-      <QuestTrackBoard
-        onBack={() => setSelectedBoard(null)}
-        onStepToggle={toggleQuestBoardStep}
-        selection={selectedBoard}
-        steps={questBoardDetails.steps}
-        subtitle={questBoardDetails.subtitle}
-        title={questBoardDetails.title}
+        onPlayCard={playBattleCard}
+        onRecallCard={recallBattleCard}
+        onResetBattle={resetBattle}
       />
     );
   }
@@ -840,8 +839,8 @@ export default function App() {
         <p className="eyebrow">TODAY&apos;S ADVENTURE</p>
         <h1>Quest Cat</h1>
         <p className="hero-copy">
-          Turn your routines into playable cards, slam them onto the battlefield, and beat the
-          monster by actually playing your day like an RPG.
+          Every quest type can now open as a card battle. Build your hand, play cards to the field,
+          and watch the monster card lose health.
         </p>
 
         <div className="hero-stats">
@@ -866,75 +865,50 @@ export default function App() {
             <span style={{ width: `${rankProgress.progressPercent}%` }} />
           </div>
           <p className="rank-note">
-            The daily battle uses your routine cards. Side quests and main quests still open as
-            board tracks.
+            Open any quest category and play cards from your hand to the battlefield.
           </p>
         </section>
 
-        <button
-          className="primary-button hero-action"
-          onClick={() => setSelectedBoard({ kind: 'daily-battle' })}
-          type="button"
-        >
+        <button className="primary-button hero-action" onClick={() => setSelectedBoard({ kind: 'daily' })} type="button">
           Open Daily Card Battle
         </button>
       </section>
 
       <section className="section">
         <div className="section-heading">
-          <h2>Daily Routine Cards</h2>
+          <h2>Daily Routine Decks</h2>
           <span>
             {completedCount} of {dailyQuests.length} decks cleared
           </span>
         </div>
-
         <div className="card-stack">
           {dailyQuests.map((quest) => (
-            <article
-              className={`task-card ${isDailyQuestComplete(quest) ? 'is-complete' : ''}`}
-              key={quest.id}
-            >
-              <div className="quest-content">
-                <div className="task-copy">
-                  <strong>{quest.title}</strong>
-                  <small>
-                    {quest.targetCount} cards · {quest.cardPower} damage each · {getDailyProgressLabel(quest)}
-                  </small>
-                </div>
-
-                <div className="mini-stepper" aria-label={`${quest.title} progress`}>
-                  <button
-                    className="ghost-button"
-                    onClick={() => setDailyQuestProgress(quest.id, quest.progressCount - 1)}
-                    type="button"
-                  >
-                    -
-                  </button>
-                  <span>{quest.progressCount}</span>
-                  <button
-                    className="ghost-button"
-                    onClick={() => setDailyQuestProgress(quest.id, quest.progressCount + 1)}
-                    type="button"
-                  >
-                    +
-                  </button>
-                </div>
+            <article className="game-card list-card" key={quest.id}>
+              <div className="battle-card-topline">
+                <span className="battle-card-type">daily deck</span>
+                <span className="battle-stat-chip">{quest.cardPower} dmg</span>
               </div>
-
+              <div className="battle-card-art" aria-hidden="true">
+                💧
+              </div>
+              <strong>{quest.title}</strong>
+              <small>
+                {quest.targetCount} cards · +{quest.xp} XP · {getDailyProgressLabel(quest)}
+              </small>
+              <div className="mini-stepper" aria-label={`${quest.title} progress`}>
+                <button className="ghost-button" onClick={() => setDailyQuestProgress(quest.id, quest.progressCount - 1)} type="button">
+                  -
+                </button>
+                <span>{quest.progressCount}</span>
+                <button className="ghost-button" onClick={() => setDailyQuestProgress(quest.id, quest.progressCount + 1)} type="button">
+                  +
+                </button>
+              </div>
               <div className="card-actions">
-                <button
-                  className="ghost-button"
-                  onClick={() => setSelectedBoard({ kind: 'daily-battle' })}
-                  type="button"
-                >
+                <button className="ghost-button" onClick={() => setSelectedBoard({ kind: 'daily' })} type="button">
                   Open Battle
                 </button>
-                <button
-                  aria-label={`Delete ${quest.title}`}
-                  className="ghost-button danger-button"
-                  onClick={() => deleteDailyQuest(quest.id)}
-                  type="button"
-                >
+                <button className="ghost-button danger-button" onClick={() => deleteDailyQuest(quest.id)} type="button">
                   Delete
                 </button>
               </div>
@@ -944,34 +918,12 @@ export default function App() {
 
         <form className="quest-form" onSubmit={addDailyQuest}>
           <h3>Add Daily Card Deck</h3>
-          <input
-            onChange={(event) => setDailyTitle(event.target.value)}
-            placeholder="Routine title"
-            value={dailyTitle}
-          />
+          <input onChange={(event) => setDailyTitle(event.target.value)} placeholder="Routine title" value={dailyTitle} />
           <div className="form-grid">
-            <input
-              min="0"
-              onChange={(event) => setDailyXp(event.target.value)}
-              placeholder="XP reward"
-              type="number"
-              value={dailyXp}
-            />
-            <input
-              min="1"
-              onChange={(event) => setDailyTarget(event.target.value)}
-              placeholder="Number of cards"
-              type="number"
-              value={dailyTarget}
-            />
+            <input min="0" onChange={(event) => setDailyXp(event.target.value)} placeholder="XP reward" type="number" value={dailyXp} />
+            <input min="1" onChange={(event) => setDailyTarget(event.target.value)} placeholder="Number of cards" type="number" value={dailyTarget} />
           </div>
-          <input
-            min="1"
-            onChange={(event) => setDailyPower(event.target.value)}
-            placeholder="Damage per card"
-            type="number"
-            value={dailyPower}
-          />
+          <input min="1" onChange={(event) => setDailyPower(event.target.value)} placeholder="Damage per card" type="number" value={dailyPower} />
           <button className="primary-button form-button" type="submit">
             Add Daily Card Deck
           </button>
@@ -980,74 +932,42 @@ export default function App() {
 
       <section className="section">
         <div className="section-heading">
-          <h2>Side Quests</h2>
+          <h2>Side Quest Decks</h2>
           <span>Worth {sideQuestXp} bonus XP</span>
         </div>
-
         <div className="card-stack">
           {sideQuests.map((quest) => {
             const completion = getQuestCompletion(quest);
 
             return (
-              <article
-                className={`goal-card side-quest-card ${quest.done ? 'is-complete' : ''}`}
-                key={quest.id}
-              >
-                <div className="quest-card-copy">
-                  <div className="quest-card-header">
-                    <label className="check-row quest-check-row">
-                      <input
-                        checked={quest.done}
-                        onChange={() => toggleQuest(quest.id, setSideQuests)}
-                        type="checkbox"
-                      />
-                      <div className="task-copy">
-                        <strong>{quest.title}</strong>
-                        <small>
-                          {quest.difficulty} · {completion.progressLabel}
-                        </small>
-                      </div>
-                    </label>
-                    <span className="side-quest-xp">+{quest.xp} XP</span>
-                  </div>
-
-                  <ul className="objective-list" aria-label={`${quest.title} objectives`}>
-                    {quest.objectives.map((objective) => (
-                      <li key={objective.id}>
-                        <label className="objective-check">
-                          <input
-                            checked={objective.done}
-                            onChange={() =>
-                              toggleObjective(quest.id, objective.id, setSideQuests)
-                            }
-                            type="checkbox"
-                          />
-                          <span>{objective.title}</span>
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="quest-card-footer">
-                    <p className="reward-pill">Reward: {quest.reward}</p>
-                    <div className="card-actions">
-                      <button
-                        className="ghost-button"
-                        onClick={() => setSelectedBoard({ kind: 'side', questId: quest.id })}
-                        type="button"
-                      >
-                        Open Board
-                      </button>
-                      <button
-                        aria-label={`Delete ${quest.title}`}
-                        className="ghost-button danger-button"
-                        onClick={() => deleteQuest(quest.id, 'side', setSideQuests)}
-                        type="button"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
+              <article className="game-card list-card" key={quest.id}>
+                <div className="battle-card-topline">
+                  <span className="battle-card-type">side deck</span>
+                  <span className="battle-stat-chip">{quest.xp ?? 0} xp</span>
+                </div>
+                <div className="battle-card-art" aria-hidden="true">
+                  🗡️
+                </div>
+                <strong>{quest.title}</strong>
+                <small>{quest.difficulty} · {completion.progressLabel}</small>
+                <p className="reward-pill">Reward: {quest.reward}</p>
+                <ul className="objective-list" aria-label={`${quest.title} objectives`}>
+                  {quest.objectives.map((objective) => (
+                    <li key={objective.id}>
+                      <label className="objective-check">
+                        <input checked={objective.done} onChange={() => toggleObjective(quest.id, objective.id, setSideQuests)} type="checkbox" />
+                        <span>{objective.title}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                <div className="card-actions">
+                  <button className="ghost-button" onClick={() => setSelectedBoard({ kind: 'side', questId: quest.id })} type="button">
+                    Open Battle
+                  </button>
+                  <button className="ghost-button danger-button" onClick={() => deleteQuest(quest.id, 'side', setSideQuests)} type="button">
+                    Delete
+                  </button>
                 </div>
               </article>
             );
@@ -1056,36 +976,13 @@ export default function App() {
 
         <form className="quest-form" onSubmit={addSideQuest}>
           <h3>Add Side Quest</h3>
-          <input
-            onChange={(event) => setSideTitle(event.target.value)}
-            placeholder="Quest title"
-            value={sideTitle}
-          />
+          <input onChange={(event) => setSideTitle(event.target.value)} placeholder="Quest title" value={sideTitle} />
           <div className="form-grid">
-            <input
-              min="0"
-              onChange={(event) => setSideXp(event.target.value)}
-              placeholder="XP reward"
-              type="number"
-              value={sideXp}
-            />
-            <input
-              onChange={(event) => setSideDifficulty(event.target.value)}
-              placeholder="Difficulty"
-              value={sideDifficulty}
-            />
+            <input min="0" onChange={(event) => setSideXp(event.target.value)} placeholder="XP reward" type="number" value={sideXp} />
+            <input onChange={(event) => setSideDifficulty(event.target.value)} placeholder="Difficulty" value={sideDifficulty} />
           </div>
-          <input
-            onChange={(event) => setSideReward(event.target.value)}
-            placeholder="Reward"
-            value={sideReward}
-          />
-          <textarea
-            onChange={(event) => setSideObjectives(event.target.value)}
-            placeholder={'One sub quest per line\nExample: Buy groceries'}
-            rows={4}
-            value={sideObjectives}
-          />
+          <input onChange={(event) => setSideReward(event.target.value)} placeholder="Reward" value={sideReward} />
+          <textarea onChange={(event) => setSideObjectives(event.target.value)} placeholder={'One sub quest per line\nExample: Buy groceries'} rows={4} value={sideObjectives} />
           <button className="primary-button form-button" type="submit">
             Add Side Quest
           </button>
@@ -1094,68 +991,42 @@ export default function App() {
 
       <section className="section">
         <div className="section-heading">
-          <h2>Main Quests</h2>
-          <span>Keep momentum</span>
+          <h2>Main Quest Decks</h2>
+          <span>Story battles</span>
         </div>
-
         <div className="card-stack">
           {mainQuests.map((quest) => {
             const completion = getQuestCompletion(quest);
 
             return (
-              <article className={`goal-card ${quest.done ? 'is-complete' : ''}`} key={quest.id}>
-                <div className="quest-card-copy">
-                  <div className="quest-card-header">
-                    <label className="check-row quest-check-row">
-                      <input
-                        checked={quest.done}
-                        onChange={() => toggleQuest(quest.id, setMainQuests)}
-                        type="checkbox"
-                      />
-                      <div>
-                        <strong>{quest.title}</strong>
-                        <small>{completion.progressLabel}</small>
-                      </div>
-                    </label>
-                  </div>
-
-                  <ul className="objective-list" aria-label={`${quest.title} objectives`}>
-                    {quest.objectives.map((objective) => (
-                      <li key={objective.id}>
-                        <label className="objective-check">
-                          <input
-                            checked={objective.done}
-                            onChange={() =>
-                              toggleObjective(quest.id, objective.id, setMainQuests)
-                            }
-                            type="checkbox"
-                          />
-                          <span>{objective.title}</span>
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="quest-card-footer">
-                    <p className="reward-pill">Reward: {quest.reward}</p>
-                    <div className="card-actions">
-                      <button
-                        className="ghost-button"
-                        onClick={() => setSelectedBoard({ kind: 'main', questId: quest.id })}
-                        type="button"
-                      >
-                        Open Board
-                      </button>
-                      <button
-                        aria-label={`Delete ${quest.title}`}
-                        className="ghost-button danger-button"
-                        onClick={() => deleteQuest(quest.id, 'main', setMainQuests)}
-                        type="button"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
+              <article className="game-card list-card" key={quest.id}>
+                <div className="battle-card-topline">
+                  <span className="battle-card-type">main deck</span>
+                  <span className="battle-stat-chip">{completion.objectiveCount} cards</span>
+                </div>
+                <div className="battle-card-art" aria-hidden="true">
+                  👑
+                </div>
+                <strong>{quest.title}</strong>
+                <small>{completion.progressLabel}</small>
+                <p className="reward-pill">Reward: {quest.reward}</p>
+                <ul className="objective-list" aria-label={`${quest.title} objectives`}>
+                  {quest.objectives.map((objective) => (
+                    <li key={objective.id}>
+                      <label className="objective-check">
+                        <input checked={objective.done} onChange={() => toggleObjective(quest.id, objective.id, setMainQuests)} type="checkbox" />
+                        <span>{objective.title}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                <div className="card-actions">
+                  <button className="ghost-button" onClick={() => setSelectedBoard({ kind: 'main', questId: quest.id })} type="button">
+                    Open Battle
+                  </button>
+                  <button className="ghost-button danger-button" onClick={() => deleteQuest(quest.id, 'main', setMainQuests)} type="button">
+                    Delete
+                  </button>
                 </div>
               </article>
             );
@@ -1164,22 +1035,9 @@ export default function App() {
 
         <form className="quest-form" onSubmit={addMainQuest}>
           <h3>Add Main Quest</h3>
-          <input
-            onChange={(event) => setMainTitle(event.target.value)}
-            placeholder="Main quest title"
-            value={mainTitle}
-          />
-          <input
-            onChange={(event) => setMainReward(event.target.value)}
-            placeholder="Reward"
-            value={mainReward}
-          />
-          <textarea
-            onChange={(event) => setMainObjectives(event.target.value)}
-            placeholder={'One sub quest per line\nExample: Finish onboarding flow'}
-            rows={4}
-            value={mainObjectives}
-          />
+          <input onChange={(event) => setMainTitle(event.target.value)} placeholder="Main quest title" value={mainTitle} />
+          <input onChange={(event) => setMainReward(event.target.value)} placeholder="Reward" value={mainReward} />
+          <textarea onChange={(event) => setMainObjectives(event.target.value)} placeholder={'One sub quest per line\nExample: Finish onboarding flow'} rows={4} value={mainObjectives} />
           <button className="primary-button form-button" type="submit">
             Add Main Quest
           </button>
