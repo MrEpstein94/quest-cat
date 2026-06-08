@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type Dispatch, type FormEvent, type SetStateAction } from 'react';
 
 type DailyQuest = {
   id: string;
@@ -384,107 +384,131 @@ function BattleBoard({
         <p className="hero-copy">{battleState.subtitle}</p>
       </section>
 
-      <section className={`monster-card monster-arena ${hitCount > 0 ? 'is-hit' : ''}`} aria-label="Monster arena">
-        <div className="monster-header">
-          <div>
-            <span className="monster-label">Monster Card</span>
-            <strong>{battleState.monsterName}</strong>
-            <span className="monster-mood">{battleState.monsterMood}</span>
-          </div>
-          <span className={`monster-status ${monsterDefeated ? 'is-victory' : ''}`}>
-            {monsterDefeated ? 'KO' : `${battleState.currentHp} HP`}
-          </span>
-        </div>
+      <section className={`battle-scene ${hitCount > 0 ? 'is-hit' : ''}`} aria-label="Battle scene">
+        <div className="battle-atmosphere" aria-hidden="true" />
 
-        <article className="monster-boss-card" key={hitCount}>
-          <div className="monster-boss-topline">
-            <span className="battle-card-type">Boss</span>
+        <section className="monster-stage">
+          <div className="monster-stage-topbar">
+            <div>
+              <span className="monster-label">Elite Encounter</span>
+              <strong>{battleState.monsterName}</strong>
+            </div>
+            <span className={`monster-status ${monsterDefeated ? 'is-victory' : ''}`}>
+              {monsterDefeated ? 'KO' : `${battleState.currentHp} HP`}
+            </span>
+          </div>
+
+          <div className="monster-intent-row">
+            <span className="intent-badge">
+              {monsterDefeated ? 'Broken Intent' : `Intent: endure ${handCards.length} more plays`}
+            </span>
             <span className="battle-stat-chip">{battleState.totalHp} max HP</span>
           </div>
-          <div className="monster-boss-art" aria-hidden="true">
-            {monsterDefeated ? '💥' : '👹'}
+
+          <article className="monster-boss-card" key={hitCount}>
+            <div className="monster-boss-topline">
+              <span className="battle-card-type">Boss</span>
+              <span className="battle-stat-chip">{fieldCards.length} hits landed</span>
+            </div>
+            <div className="monster-boss-art" aria-hidden="true">
+              {monsterDefeated ? '💥' : '👹'}
+            </div>
+            <strong>{battleState.monsterName}</strong>
+            <small>{battleState.monsterMood}</small>
+          </article>
+
+          <div className="monster-bar-wrap">
+            <div className="monster-bar" aria-hidden="true">
+              <span style={{ width: `${healthPercent}%` }} />
+            </div>
+            <div className="battle-stats">
+              <span>{battleState.totalHp - battleState.currentHp} damage dealt</span>
+              <span>{fieldCards.length} cards on field</span>
+            </div>
           </div>
-          <strong>{battleState.monsterName}</strong>
-          <small>{monsterDefeated ? 'Victory loot unlocked.' : 'Take it down by playing your cards.'}</small>
-        </article>
+        </section>
 
-        <div className="monster-bar" aria-hidden="true">
-          <span style={{ width: `${healthPercent}%` }} />
-        </div>
+        <section className="battlefield-lane">
+          <div className="section-heading battle-heading">
+            <h2>Battlefield</h2>
+            <span>{fieldCards.length} cards in play</span>
+          </div>
+          <div className="field-row">
+            {fieldCards.length === 0 ? (
+              <article className="battle-empty field-empty">
+                <strong>No cards on the field</strong>
+                <span>Play a card from your hand to strike the monster.</span>
+              </article>
+            ) : (
+              fieldCards.map((card, index) => (
+                <button
+                  className={`battle-card game-card is-played field-card ${lastPlayedId === card.id ? 'just-played' : ''}`}
+                  key={card.id}
+                  onClick={() => onRecallCard(card.id)}
+                  style={{ '--field-index': index } as CSSProperties}
+                  type="button"
+                >
+                  <div className="battle-card-topline">
+                    <span className="battle-card-type">field card</span>
+                    <span className="battle-stat-chip">{card.cardPower} dmg</span>
+                  </div>
+                  <div className="battle-card-art" aria-hidden="true">
+                    ⚔️
+                  </div>
+                  <strong>{card.title}</strong>
+                  <small>Already dealt damage. Tap to pull it back to hand.</small>
+                  <span className="battle-card-action">Recall to hand</span>
+                </button>
+              ))
+            )}
+          </div>
+        </section>
 
-        <div className="battle-stats">
-          <span>{battleState.totalHp - battleState.currentHp} damage dealt</span>
-          <span>{fieldCards.length} cards on field</span>
-        </div>
-
-        <button className="ghost-button reset-button" onClick={onResetBattle} type="button">
-          Reset Battle
-        </button>
-      </section>
-
-      <section className="section">
-        <div className="section-heading">
-          <h2>Your Hand</h2>
-          <span>{handCards.length} cards waiting</span>
-        </div>
-        <div className="card-grid battle-zone">
-          {handCards.length === 0 ? (
-            <article className="battle-empty">
-              <strong>No cards in hand</strong>
-              <span>Everything playable is already on the battlefield.</span>
-            </article>
-          ) : (
-            handCards.map((card) => (
-              <button className="battle-card game-card" key={card.id} onClick={() => onPlayCard(card.id)} type="button">
-                <div className="battle-card-topline">
-                  <span className="battle-card-type">{card.family} card</span>
-                  <span className="battle-stat-chip">{card.cardPower} dmg</span>
-                </div>
-                <div className="battle-card-art" aria-hidden="true">
-                  {card.family === 'daily' ? '💧' : card.family === 'side' ? '🗡️' : '👑'}
-                </div>
-                <strong>{card.title}</strong>
-                <small>{card.flavor}</small>
-                <span className="battle-card-action">Play to field</span>
-              </button>
-            ))
-          )}
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="section-heading">
-          <h2>Battlefield</h2>
-          <span>{fieldCards.length} cards in play</span>
-        </div>
-        <div className="card-grid battle-zone">
-          {fieldCards.length === 0 ? (
-            <article className="battle-empty">
-              <strong>No cards on the field</strong>
-              <span>Play a card from your hand to hit the monster.</span>
-            </article>
-          ) : (
-            fieldCards.map((card) => (
-              <button
-                className={`battle-card game-card is-played ${lastPlayedId === card.id ? 'just-played' : ''}`}
-                key={card.id}
-                onClick={() => onRecallCard(card.id)}
-                type="button"
-              >
-                <div className="battle-card-topline">
-                  <span className="battle-card-type">field card</span>
-                  <span className="battle-stat-chip">{card.cardPower} dmg</span>
-                </div>
-                <div className="battle-card-art" aria-hidden="true">
-                  ⚔️
-                </div>
-                <strong>{card.title}</strong>
-                <small>Already dealt damage. Tap to pull it back to hand.</small>
-                <span className="battle-card-action">Recall to hand</span>
-              </button>
-            ))
-          )}
-        </div>
+        <section className="hand-dock">
+          <div className="hand-hud">
+            <div className="section-heading battle-heading">
+              <h2>Your Hand</h2>
+              <span>{handCards.length} cards waiting</span>
+            </div>
+            <button className="ghost-button reset-button" onClick={onResetBattle} type="button">
+              Reset Battle
+            </button>
+          </div>
+          <div className="hand-fan">
+            {handCards.length === 0 ? (
+              <article className="battle-empty hand-empty">
+                <strong>No cards in hand</strong>
+                <span>Everything playable is already on the battlefield.</span>
+              </article>
+            ) : (
+              handCards.map((card, index) => (
+                <button
+                  className="battle-card game-card hand-card"
+                  key={card.id}
+                  onClick={() => onPlayCard(card.id)}
+                  style={
+                    {
+                      '--card-index': index,
+                      '--card-count': handCards.length,
+                    } as CSSProperties
+                  }
+                  type="button"
+                >
+                  <div className="battle-card-topline">
+                    <span className="battle-card-type">{card.family} card</span>
+                    <span className="battle-stat-chip">{card.cardPower} dmg</span>
+                  </div>
+                  <div className="battle-card-art" aria-hidden="true">
+                    {card.family === 'daily' ? '💧' : card.family === 'side' ? '🗡️' : '👑'}
+                  </div>
+                  <strong>{card.title}</strong>
+                  <small>{card.flavor}</small>
+                  <span className="battle-card-action">Play to field</span>
+                </button>
+              ))
+            )}
+          </div>
+        </section>
       </section>
     </main>
   );
