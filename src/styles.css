@@ -477,6 +477,17 @@ h1 {
   gap: 10px;
 }
 
+.objective-check span {
+  display: grid;
+  gap: 4px;
+}
+
+.objective-power {
+  color: #fff1cc;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
 .reward-pill {
   margin: 14px 0 0;
   display: inline-block;
@@ -555,6 +566,18 @@ h1 {
   font-size: 1rem;
 }
 
+.form-note,
+.form-helper {
+  margin: 0;
+  color: #aabecb;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.form-helper {
+  color: #fff1cc;
+}
+
 .quest-form input,
 .quest-form textarea {
   width: 100%;
@@ -579,6 +602,16 @@ h1 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.monster-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.monster-mode-row .ghost-button {
+  flex: 1 1 180px;
 }
 
 .form-button {
@@ -702,6 +735,22 @@ h1 {
   border: 1px solid rgba(248, 113, 113, 0.3);
   color: #ffd0c9;
   font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.victory-reward {
+  margin: 14px 0 0;
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(246, 199, 110, 0.24);
+  color: #fff1cc;
+  font-size: 0.84rem;
   font-weight: 800;
 }
 

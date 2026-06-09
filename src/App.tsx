@@ -12,6 +12,7 @@ type DailyQuest = {
 type Objective = {
   id: string;
   title: string;
+  cardPower: number;
   done: boolean;
 };
 
@@ -20,6 +21,7 @@ type Quest = {
   title: string;
   xp?: number;
   difficulty?: string;
+  monsterName?: string;
   reward: string;
   done: boolean;
   objectives: Objective[];
@@ -84,9 +86,9 @@ const defaultSideQuests: Quest[] = [
     reward: '15 minutes guilt-free scrolling',
     done: false,
     objectives: [
-      { id: 'side-1-1', title: 'Pick one person', done: false },
-      { id: 'side-1-2', title: 'Send the message', done: false },
-      { id: 'side-1-3', title: 'Archive the thread', done: false },
+      { id: 'side-1-1', title: 'Pick one person', cardPower: 4, done: false },
+      { id: 'side-1-2', title: 'Send the message', cardPower: 5, done: false },
+      { id: 'side-1-3', title: 'Archive the thread', cardPower: 6, done: false },
     ],
   },
   {
@@ -97,9 +99,9 @@ const defaultSideQuests: Quest[] = [
     reward: 'Fresh coffee after cleanup',
     done: false,
     objectives: [
-      { id: 'side-2-1', title: 'Choose one desk or counter', done: false },
-      { id: 'side-2-2', title: 'Throw away trash', done: false },
-      { id: 'side-2-3', title: 'Put items back', done: false },
+      { id: 'side-2-1', title: 'Choose one desk or counter', cardPower: 4, done: false },
+      { id: 'side-2-2', title: 'Throw away trash', cardPower: 5, done: false },
+      { id: 'side-2-3', title: 'Put items back', cardPower: 6, done: false },
     ],
   },
   {
@@ -110,9 +112,9 @@ const defaultSideQuests: Quest[] = [
     reward: 'New sticker unlock',
     done: false,
     objectives: [
-      { id: 'side-3-1', title: 'Set a 15-minute timer', done: false },
-      { id: 'side-3-2', title: 'Read without phone', done: false },
-      { id: 'side-3-3', title: 'Log one takeaway', done: false },
+      { id: 'side-3-1', title: 'Set a 15-minute timer', cardPower: 6, done: false },
+      { id: 'side-3-2', title: 'Read without phone', cardPower: 7, done: false },
+      { id: 'side-3-3', title: 'Log one takeaway', cardPower: 8, done: false },
     ],
   },
 ];
@@ -124,8 +126,8 @@ const defaultMainQuests: Quest[] = [
     reward: 'Weekend cafe visit',
     done: false,
     objectives: [
-      { id: 'main-1-1', title: 'Finish 3 daily quests each day', done: false },
-      { id: 'main-1-2', title: 'Keep the streak alive tonight', done: false },
+      { id: 'main-1-1', title: 'Finish 3 daily quests each day', cardPower: 8, done: false },
+      { id: 'main-1-2', title: 'Keep the streak alive tonight', cardPower: 10, done: false },
     ],
   },
   {
@@ -134,9 +136,9 @@ const defaultMainQuests: Quest[] = [
     reward: 'Buy a custom cat icon pack',
     done: false,
     objectives: [
-      { id: 'main-2-1', title: 'Finish quest list layout', done: false },
-      { id: 'main-2-2', title: 'Define reward system', done: false },
-      { id: 'main-2-3', title: 'Ship first installable build', done: false },
+      { id: 'main-2-1', title: 'Finish quest list layout', cardPower: 8, done: false },
+      { id: 'main-2-2', title: 'Define reward system', cardPower: 9, done: false },
+      { id: 'main-2-3', title: 'Ship first installable build', cardPower: 11, done: false },
     ],
   },
 ];
@@ -167,6 +169,38 @@ function getQuestCompletion(quest: Quest) {
     progressLabel:
       objectiveCount === 0 ? 'No sub quests yet' : `${completedObjectives} / ${objectiveCount} cards played`,
   };
+}
+
+function slugWords(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function titleize(value: string) {
+  return value.replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function autoGenerateMonsterName(kind: 'side' | 'main', title: string) {
+  const words = slugWords(title);
+  const anchor = words[0] ?? 'quest';
+  const tail = words[words.length - 1] ?? 'trial';
+  const sideTemplates = [
+    `The ${titleize(anchor)} Bandit`,
+    `${titleize(anchor)} Warden`,
+    `The ${titleize(tail)} Shade`,
+  ];
+  const mainTemplates = [
+    `${titleize(anchor)} Sovereign`,
+    `The ${titleize(tail)} Titan`,
+    `${titleize(anchor)} Overlord`,
+  ];
+  const templates = kind === 'side' ? sideTemplates : mainTemplates;
+  const hash = words.join('').length % templates.length;
+
+  return templates[hash];
 }
 
 function getXpRequiredForLevel(level: number) {
@@ -225,7 +259,19 @@ function normalizeObjective(objective: Partial<Objective>) {
   return {
     id: objective.id ?? createId('objective'),
     title: objective.title ?? 'New step',
+    cardPower: Math.max(1, Number(objective.cardPower ?? 4)),
     done: Boolean(objective.done),
+  };
+}
+
+function parseObjectiveLine(line: string, fallbackPower: number) {
+  const [rawTitle, rawPower] = line.split('|').map((part) => part.trim());
+  const title = rawTitle || line.trim();
+  const parsedPower = Number(rawPower?.replace(/[^0-9.-]/g, ''));
+
+  return {
+    title,
+    cardPower: Number.isFinite(parsedPower) && parsedPower > 0 ? parsedPower : fallbackPower,
   };
 }
 
@@ -240,6 +286,7 @@ function normalizeQuest(quest: Partial<Quest>) {
     title: quest.title ?? 'New quest',
     xp: quest.xp,
     difficulty: quest.difficulty,
+    monsterName: quest.monsterName?.trim() || undefined,
     reward: quest.reward ?? 'Mystery reward',
     done,
     objectives,
@@ -322,11 +369,11 @@ function buildBattleState(
     return null;
   }
 
-  const cards = quest.objectives.map<BattleCard>((objective, index) => ({
+  const cards = quest.objectives.map<BattleCard>((objective) => ({
     id: objective.id,
     originId: objective.id,
     title: objective.title,
-    cardPower: Math.max(4, Math.ceil((quest.xp ?? 12) / Math.max(quest.objectives.length, 1)) + index),
+    cardPower: objective.cardPower,
     played: objective.done,
     flavor: selection.kind === 'side' ? 'Tactical side-quest move' : 'Storyline power move',
     family: selection.kind,
@@ -336,11 +383,12 @@ function buildBattleState(
     0,
     totalHp - cards.filter((card) => card.played).reduce((total, card) => total + card.cardPower, 0),
   );
+  const monsterName = quest.monsterName || autoGenerateMonsterName(selection.kind, quest.title);
 
   return {
     title: quest.title,
     subtitle: quest.reward,
-    monsterName: currentHp === 0 ? `${quest.title} Cleared` : `${quest.title} Boss`,
+    monsterName,
     monsterMood: selection.kind === 'side' ? 'A quick skirmish with bonus loot.' : 'A larger boss battle with story stakes.',
     totalHp: Math.max(totalHp, 1),
     currentHp,
@@ -404,6 +452,8 @@ function BattleBoard({
             </span>
             <span className="battle-stat-chip">{battleState.totalHp} max HP</span>
           </div>
+
+          {monsterDefeated ? <p className="victory-reward">Reward unlocked: {battleState.subtitle}</p> : null}
 
           <article className="monster-boss-card" key={hitCount}>
             <div className="monster-boss-topline">
@@ -517,7 +567,7 @@ export default function App() {
   const [dailyQuests, setDailyQuests] = useState(initialState.dailyQuests);
   const [sideQuests, setSideQuests] = useState(initialState.sideQuests);
   const [mainQuests, setMainQuests] = useState(initialState.mainQuests);
-  const [builderMode, setBuilderMode] = useState<'daily' | 'side' | 'main' | null>('daily');
+  const [builderMode, setBuilderMode] = useState<'daily' | 'side' | 'main' | null>('side');
   const [selectedBoard, setSelectedBoard] = useState<BoardSelection | null>(null);
   const [lastPlayedId, setLastPlayedId] = useState<string | null>(null);
   const [hitCount, setHitCount] = useState(0);
@@ -531,10 +581,14 @@ export default function App() {
   const [sideXp, setSideXp] = useState('10');
   const [sideDifficulty, setSideDifficulty] = useState('');
   const [sideReward, setSideReward] = useState('');
+  const [sideMonsterMode, setSideMonsterMode] = useState<'auto' | 'custom'>('auto');
+  const [sideMonsterName, setSideMonsterName] = useState('');
   const [sideObjectives, setSideObjectives] = useState('');
 
   const [mainTitle, setMainTitle] = useState('');
   const [mainReward, setMainReward] = useState('');
+  const [mainMonsterMode, setMainMonsterMode] = useState<'auto' | 'custom'>('auto');
+  const [mainMonsterName, setMainMonsterName] = useState('');
   const [mainObjectives, setMainObjectives] = useState('');
 
   useEffect(() => {
@@ -609,11 +663,16 @@ export default function App() {
       .split('\n')
       .map((objective) => objective.trim())
       .filter(Boolean)
-      .map((objective) => ({
+      .map((objective, index) => {
+        const parsedObjective = parseObjectiveLine(objective, Math.max(4, Math.ceil((xp || 12) / 2) + index));
+
+        return {
         id: createId('side-objective'),
-        title: objective,
+        title: parsedObjective.title,
+        cardPower: parsedObjective.cardPower,
         done: false,
-      }));
+        };
+      });
 
     if (!title || !reward || Number.isNaN(xp) || xp < 0) {
       return;
@@ -626,6 +685,7 @@ export default function App() {
         title,
         xp,
         difficulty: sideDifficulty.trim() || 'Custom',
+        monsterName: sideMonsterMode === 'custom' ? sideMonsterName.trim() || undefined : undefined,
         reward,
         done: false,
         objectives,
@@ -635,6 +695,8 @@ export default function App() {
     setSideXp('10');
     setSideDifficulty('');
     setSideReward('');
+    setSideMonsterMode('auto');
+    setSideMonsterName('');
     setSideObjectives('');
   }
 
@@ -647,11 +709,16 @@ export default function App() {
       .split('\n')
       .map((objective) => objective.trim())
       .filter(Boolean)
-      .map((objective) => ({
+      .map((objective, index) => {
+        const parsedObjective = parseObjectiveLine(objective, 8 + index);
+
+        return {
         id: createId('main-objective'),
-        title: objective,
+        title: parsedObjective.title,
+        cardPower: parsedObjective.cardPower,
         done: false,
-      }));
+        };
+      });
 
     if (!title || !reward) {
       return;
@@ -662,6 +729,7 @@ export default function App() {
       {
         id: createId('main'),
         title,
+        monsterName: mainMonsterMode === 'custom' ? mainMonsterName.trim() || undefined : undefined,
         reward,
         done: false,
         objectives,
@@ -669,6 +737,8 @@ export default function App() {
     ]);
     setMainTitle('');
     setMainReward('');
+    setMainMonsterMode('auto');
+    setMainMonsterName('');
     setMainObjectives('');
   }
 
@@ -870,6 +940,123 @@ export default function App() {
 
       <section className="section">
         <div className="section-heading">
+          <h2>Forge a Quest</h2>
+          <span>Build new quests, cards, monsters, and rewards</span>
+        </div>
+
+        <div className="builder-toggle-row">
+          <button className={`ghost-button ${builderMode === 'daily' ? 'is-selected' : ''}`} onClick={() => setBuilderMode('daily')} type="button">
+            Daily Deck
+          </button>
+          <button className={`ghost-button ${builderMode === 'side' ? 'is-selected' : ''}`} onClick={() => setBuilderMode('side')} type="button">
+            Side Quest
+          </button>
+          <button className={`ghost-button ${builderMode === 'main' ? 'is-selected' : ''}`} onClick={() => setBuilderMode('main')} type="button">
+            Main Quest
+          </button>
+        </div>
+
+        {builderMode === 'daily' ? (
+          <form className="quest-form" onSubmit={addDailyQuest}>
+            <h3>Add Daily Card Deck</h3>
+            <p className="form-note">Create a repeatable routine deck with however many cards you want to play each day.</p>
+            <input onChange={(event) => setDailyTitle(event.target.value)} placeholder="Routine title" value={dailyTitle} />
+            <div className="form-grid">
+              <input min="0" onChange={(event) => setDailyXp(event.target.value)} placeholder="XP reward" type="number" value={dailyXp} />
+              <input min="1" onChange={(event) => setDailyTarget(event.target.value)} placeholder="Number of cards" type="number" value={dailyTarget} />
+            </div>
+            <input min="1" onChange={(event) => setDailyPower(event.target.value)} placeholder="Damage per card" type="number" value={dailyPower} />
+            <button className="primary-button form-button" type="submit">
+              Add Daily Card Deck
+            </button>
+          </form>
+        ) : null}
+
+        {builderMode === 'side' ? (
+          <form className="quest-form" onSubmit={addSideQuest}>
+            <h3>Add Side Quest</h3>
+            <p className="form-note">Give the quest a reward, add as many cards as you want, and choose whether the monster is custom or generated for you.</p>
+            <input onChange={(event) => setSideTitle(event.target.value)} placeholder="Quest title" value={sideTitle} />
+            <div className="form-grid">
+              <input min="0" onChange={(event) => setSideXp(event.target.value)} placeholder="XP reward" type="number" value={sideXp} />
+              <input onChange={(event) => setSideDifficulty(event.target.value)} placeholder="Difficulty" value={sideDifficulty} />
+            </div>
+            <input onChange={(event) => setSideReward(event.target.value)} placeholder="Reward for completion" value={sideReward} />
+            <div className="monster-mode-row" role="group" aria-label="Monster naming">
+              <button
+                className={`ghost-button ${sideMonsterMode === 'auto' ? 'is-selected' : ''}`}
+                onClick={() => setSideMonsterMode('auto')}
+                type="button"
+              >
+                Auto-generate Monster
+              </button>
+              <button
+                className={`ghost-button ${sideMonsterMode === 'custom' ? 'is-selected' : ''}`}
+                onClick={() => setSideMonsterMode('custom')}
+                type="button"
+              >
+                Name Monster Yourself
+              </button>
+            </div>
+            {sideMonsterMode === 'custom' ? (
+              <input onChange={(event) => setSideMonsterName(event.target.value)} placeholder="Monster name" value={sideMonsterName} />
+            ) : (
+              <p className="form-helper">Monster preview: {autoGenerateMonsterName('side', sideTitle || 'side quest')}</p>
+            )}
+            <textarea
+              onChange={(event) => setSideObjectives(event.target.value)}
+              placeholder={'One card per line\nUse "Card title | 8" for custom damage\nExample: Send the message | 6'}
+              rows={5}
+              value={sideObjectives}
+            />
+            <button className="primary-button form-button" type="submit">
+              Add Side Quest
+            </button>
+          </form>
+        ) : null}
+
+        {builderMode === 'main' ? (
+          <form className="quest-form" onSubmit={addMainQuest}>
+            <h3>Add Main Quest</h3>
+            <p className="form-note">Create a larger boss battle with a completion reward and a full hand of cards.</p>
+            <input onChange={(event) => setMainTitle(event.target.value)} placeholder="Main quest title" value={mainTitle} />
+            <input onChange={(event) => setMainReward(event.target.value)} placeholder="Reward for completion" value={mainReward} />
+            <div className="monster-mode-row" role="group" aria-label="Main quest monster naming">
+              <button
+                className={`ghost-button ${mainMonsterMode === 'auto' ? 'is-selected' : ''}`}
+                onClick={() => setMainMonsterMode('auto')}
+                type="button"
+              >
+                Auto-generate Monster
+              </button>
+              <button
+                className={`ghost-button ${mainMonsterMode === 'custom' ? 'is-selected' : ''}`}
+                onClick={() => setMainMonsterMode('custom')}
+                type="button"
+              >
+                Name Monster Yourself
+              </button>
+            </div>
+            {mainMonsterMode === 'custom' ? (
+              <input onChange={(event) => setMainMonsterName(event.target.value)} placeholder="Monster name" value={mainMonsterName} />
+            ) : (
+              <p className="form-helper">Monster preview: {autoGenerateMonsterName('main', mainTitle || 'main quest')}</p>
+            )}
+            <textarea
+              onChange={(event) => setMainObjectives(event.target.value)}
+              placeholder={'One card per line\nUse "Card title | 12" for custom damage\nExample: Ship first installable build | 14'}
+              rows={5}
+              value={mainObjectives}
+            />
+            <button className="primary-button form-button" type="submit">
+              Add Main Quest
+            </button>
+          </form>
+        ) : null}
+      </section>
+
+      <section className="section">
+        <div className="section-heading">
           <h2>Daily Routine Decks</h2>
           <span>
             {completedCount} of {dailyQuests.length} decks cleared
@@ -946,7 +1133,10 @@ export default function App() {
                     <li key={objective.id}>
                       <label className="objective-check">
                         <input checked={objective.done} onChange={() => toggleObjective(quest.id, objective.id, setSideQuests)} type="checkbox" />
-                        <span>{objective.title}</span>
+                        <span>
+                          {objective.title}
+                          <small className="objective-power">{objective.cardPower} dmg</small>
+                        </span>
                       </label>
                     </li>
                   ))}
@@ -993,7 +1183,10 @@ export default function App() {
                     <li key={objective.id}>
                       <label className="objective-check">
                         <input checked={objective.done} onChange={() => toggleObjective(quest.id, objective.id, setMainQuests)} type="checkbox" />
-                        <span>{objective.title}</span>
+                        <span>
+                          {objective.title}
+                          <small className="objective-power">{objective.cardPower} dmg</small>
+                        </span>
                       </label>
                     </li>
                   ))}
