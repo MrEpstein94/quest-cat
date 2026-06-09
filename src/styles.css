@@ -614,6 +614,23 @@ h1 {
   flex: 1 1 180px;
 }
 
+.card-builder {
+  display: grid;
+  gap: 10px;
+}
+
+.card-builder-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.card-row-button,
+.add-card-button {
+  width: auto;
+}
+
 .form-button {
   margin-top: 0;
 }

@@ -16,6 +16,12 @@ type Objective = {
   done: boolean;
 };
 
+type DraftCard = {
+  id: string;
+  title: string;
+  cardPower: string;
+};
+
 type Quest = {
   id: string;
   title: string;
@@ -264,15 +270,29 @@ function normalizeObjective(objective: Partial<Objective>) {
   };
 }
 
-function parseObjectiveLine(line: string, fallbackPower: number) {
-  const [rawTitle, rawPower] = line.split('|').map((part) => part.trim());
-  const title = rawTitle || line.trim();
-  const parsedPower = Number(rawPower?.replace(/[^0-9.-]/g, ''));
-
+function createDraftCard(defaultPower = '4'): DraftCard {
   return {
-    title,
-    cardPower: Number.isFinite(parsedPower) && parsedPower > 0 ? parsedPower : fallbackPower,
+    id: createId('draft-card'),
+    title: '',
+    cardPower: defaultPower,
   };
+}
+
+function normalizeDraftCards(cards: DraftCard[], fallbackBasePower: number) {
+  return cards
+    .map((card, index) => ({
+      title: card.title.trim(),
+      cardPower: Number(card.cardPower),
+      fallbackPower: fallbackBasePower + index,
+    }))
+    .filter((card) => card.title)
+    .map((card) => ({
+      id: createId('objective'),
+      title: card.title,
+      cardPower:
+        Number.isFinite(card.cardPower) && card.cardPower > 0 ? card.cardPower : card.fallbackPower,
+      done: false,
+    }));
 }
 
 function normalizeQuest(quest: Partial<Quest>) {
@@ -583,13 +603,13 @@ export default function App() {
   const [sideReward, setSideReward] = useState('');
   const [sideMonsterMode, setSideMonsterMode] = useState<'auto' | 'custom'>('auto');
   const [sideMonsterName, setSideMonsterName] = useState('');
-  const [sideObjectives, setSideObjectives] = useState('');
+  const [sideCards, setSideCards] = useState<DraftCard[]>([createDraftCard('6')]);
 
   const [mainTitle, setMainTitle] = useState('');
   const [mainReward, setMainReward] = useState('');
   const [mainMonsterMode, setMainMonsterMode] = useState<'auto' | 'custom'>('auto');
   const [mainMonsterName, setMainMonsterName] = useState('');
-  const [mainObjectives, setMainObjectives] = useState('');
+  const [mainCards, setMainCards] = useState<DraftCard[]>([createDraftCard('10')]);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -653,28 +673,37 @@ export default function App() {
     setDailyPower('3');
   }
 
+  function updateDraftCard(
+    cardId: string,
+    field: 'title' | 'cardPower',
+    value: string,
+    setter: Dispatch<SetStateAction<DraftCard[]>>,
+  ) {
+    setter((current) =>
+      current.map((card) => (card.id === cardId ? { ...card, [field]: value } : card)),
+    );
+  }
+
+  function addDraftCard(setter: Dispatch<SetStateAction<DraftCard[]>>, defaultPower: string) {
+    setter((current) => [...current, createDraftCard(defaultPower)]);
+  }
+
+  function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCard[]>>, defaultPower: string) {
+    setter((current) => {
+      const nextCards = current.filter((card) => card.id !== cardId);
+      return nextCards.length > 0 ? nextCards : [createDraftCard(defaultPower)];
+    });
+  }
+
   function addSideQuest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const title = sideTitle.trim();
     const reward = sideReward.trim();
     const xp = Number(sideXp);
-    const objectives = sideObjectives
-      .split('\n')
-      .map((objective) => objective.trim())
-      .filter(Boolean)
-      .map((objective, index) => {
-        const parsedObjective = parseObjectiveLine(objective, Math.max(4, Math.ceil((xp || 12) / 2) + index));
+    const objectives = normalizeDraftCards(sideCards, Math.max(4, Math.ceil((xp || 12) / 2)));
 
-        return {
-        id: createId('side-objective'),
-        title: parsedObjective.title,
-        cardPower: parsedObjective.cardPower,
-        done: false,
-        };
-      });
-
-    if (!title || !reward || Number.isNaN(xp) || xp < 0) {
+    if (!title || !reward || Number.isNaN(xp) || xp < 0 || objectives.length === 0) {
       return;
     }
 
@@ -697,7 +726,7 @@ export default function App() {
     setSideReward('');
     setSideMonsterMode('auto');
     setSideMonsterName('');
-    setSideObjectives('');
+    setSideCards([createDraftCard('6')]);
   }
 
   function addMainQuest(event: FormEvent<HTMLFormElement>) {
@@ -705,22 +734,9 @@ export default function App() {
 
     const title = mainTitle.trim();
     const reward = mainReward.trim();
-    const objectives = mainObjectives
-      .split('\n')
-      .map((objective) => objective.trim())
-      .filter(Boolean)
-      .map((objective, index) => {
-        const parsedObjective = parseObjectiveLine(objective, 8 + index);
+    const objectives = normalizeDraftCards(mainCards, 8);
 
-        return {
-        id: createId('main-objective'),
-        title: parsedObjective.title,
-        cardPower: parsedObjective.cardPower,
-        done: false,
-        };
-      });
-
-    if (!title || !reward) {
+    if (!title || !reward || objectives.length === 0) {
       return;
     }
 
@@ -739,7 +755,7 @@ export default function App() {
     setMainReward('');
     setMainMonsterMode('auto');
     setMainMonsterName('');
-    setMainObjectives('');
+    setMainCards([createDraftCard('10')]);
   }
 
   function setDailyQuestProgress(questId: string, progressCount: number) {
@@ -1003,12 +1019,30 @@ export default function App() {
             ) : (
               <p className="form-helper">Monster preview: {autoGenerateMonsterName('side', sideTitle || 'side quest')}</p>
             )}
-            <textarea
-              onChange={(event) => setSideObjectives(event.target.value)}
-              placeholder={'One card per line\nUse "Card title | 8" for custom damage\nExample: Send the message | 6'}
-              rows={5}
-              value={sideObjectives}
-            />
+            <div className="card-builder" aria-label="Side quest cards">
+              {sideCards.map((card, index) => (
+                <div className="card-builder-row" key={card.id}>
+                  <input
+                    onChange={(event) => updateDraftCard(card.id, 'title', event.target.value, setSideCards)}
+                    placeholder={`Card ${index + 1} title`}
+                    value={card.title}
+                  />
+                  <input
+                    min="1"
+                    onChange={(event) => updateDraftCard(card.id, 'cardPower', event.target.value, setSideCards)}
+                    placeholder="Damage"
+                    type="number"
+                    value={card.cardPower}
+                  />
+                  <button className="ghost-button card-row-button" onClick={() => removeDraftCard(card.id, setSideCards, '6')} type="button">
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button className="ghost-button add-card-button" onClick={() => addDraftCard(setSideCards, '6')} type="button">
+                Add Card
+              </button>
+            </div>
             <button className="primary-button form-button" type="submit">
               Add Side Quest
             </button>
@@ -1042,12 +1076,30 @@ export default function App() {
             ) : (
               <p className="form-helper">Monster preview: {autoGenerateMonsterName('main', mainTitle || 'main quest')}</p>
             )}
-            <textarea
-              onChange={(event) => setMainObjectives(event.target.value)}
-              placeholder={'One card per line\nUse "Card title | 12" for custom damage\nExample: Ship first installable build | 14'}
-              rows={5}
-              value={mainObjectives}
-            />
+            <div className="card-builder" aria-label="Main quest cards">
+              {mainCards.map((card, index) => (
+                <div className="card-builder-row" key={card.id}>
+                  <input
+                    onChange={(event) => updateDraftCard(card.id, 'title', event.target.value, setMainCards)}
+                    placeholder={`Card ${index + 1} title`}
+                    value={card.title}
+                  />
+                  <input
+                    min="1"
+                    onChange={(event) => updateDraftCard(card.id, 'cardPower', event.target.value, setMainCards)}
+                    placeholder="Damage"
+                    type="number"
+                    value={card.cardPower}
+                  />
+                  <button className="ghost-button card-row-button" onClick={() => removeDraftCard(card.id, setMainCards, '10')} type="button">
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button className="ghost-button add-card-button" onClick={() => addDraftCard(setMainCards, '10')} type="button">
+                Add Card
+              </button>
+            </div>
             <button className="primary-button form-button" type="submit">
               Add Main Quest
             </button>
