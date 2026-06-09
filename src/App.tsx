@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useState, type CSSProperties, type Dispatch, type FormEvent, type SetStateAction } from 'react';
 
+type Recurrence = 'none' | 'daily' | 'weekly';
+type DeadlineType = 'none' | 'endOfDay' | 'endOfWeek' | 'custom';
+
+type QuestHistoryEntry = {
+  id: string;
+  family: 'daily' | 'side' | 'main';
+  questId: string;
+  title: string;
+  reward: string;
+  completedAt: string;
+};
+
 type DailyQuest = {
   id: string;
   title: string;
@@ -7,6 +19,10 @@ type DailyQuest = {
   targetCount: number;
   progressCount: number;
   cardPower: number;
+  recurrence: Recurrence;
+  deadlineType: DeadlineType;
+  deadlineAt?: string;
+  completedAt?: string;
 };
 
 type Objective = {
@@ -31,6 +47,10 @@ type Quest = {
   reward: string;
   done: boolean;
   objectives: Objective[];
+  recurrence: Recurrence;
+  deadlineType: DeadlineType;
+  deadlineAt?: string;
+  completedAt?: string;
 };
 
 type BoardSelection =
@@ -42,6 +62,7 @@ type AppState = {
   dailyQuests: DailyQuest[];
   sideQuests: Quest[];
   mainQuests: Quest[];
+  completionHistory: QuestHistoryEntry[];
 };
 
 type BattleCard = {
@@ -64,7 +85,7 @@ type BattleState = {
   cards: BattleCard[];
 };
 
-const STORAGE_KEY = 'quest-cat-state-v4';
+const STORAGE_KEY = 'quest-cat-state-v6';
 
 const rankTitles = [
   'Tiny Paws',
@@ -76,11 +97,24 @@ const rankTitles = [
 
 const baseXp = 180;
 
+const recurrenceOptions: Array<{ value: Recurrence; label: string }> = [
+  { value: 'none', label: 'No recurrence' },
+  { value: 'daily', label: 'Repeats daily' },
+  { value: 'weekly', label: 'Repeats weekly' },
+];
+
+const deadlineOptions: Array<{ value: DeadlineType; label: string }> = [
+  { value: 'none', label: 'No time limit' },
+  { value: 'endOfDay', label: 'End of day' },
+  { value: 'endOfWeek', label: 'End of week' },
+  { value: 'custom', label: 'Custom date' },
+];
+
 const defaultDailyQuests: DailyQuest[] = [
-  { id: 'daily-1', title: 'Drink water', xp: 10, targetCount: 5, progressCount: 2, cardPower: 3 },
-  { id: 'daily-2', title: 'Shower', xp: 15, targetCount: 1, progressCount: 0, cardPower: 8 },
-  { id: 'daily-3', title: 'Brush teeth', xp: 12, targetCount: 2, progressCount: 1, cardPower: 4 },
-  { id: 'daily-4', title: '30 minute workout', xp: 35, targetCount: 1, progressCount: 0, cardPower: 12 },
+  { id: 'daily-1', title: 'Drink water', xp: 10, targetCount: 5, progressCount: 2, cardPower: 3, recurrence: 'daily', deadlineType: 'endOfDay' },
+  { id: 'daily-2', title: 'Shower', xp: 15, targetCount: 1, progressCount: 0, cardPower: 8, recurrence: 'daily', deadlineType: 'endOfDay' },
+  { id: 'daily-3', title: 'Brush teeth', xp: 12, targetCount: 2, progressCount: 1, cardPower: 4, recurrence: 'daily', deadlineType: 'endOfDay' },
+  { id: 'daily-4', title: '30 minute workout', xp: 35, targetCount: 1, progressCount: 0, cardPower: 12, recurrence: 'daily', deadlineType: 'endOfDay' },
 ];
 
 const defaultSideQuests: Quest[] = [
@@ -91,6 +125,8 @@ const defaultSideQuests: Quest[] = [
     difficulty: 'Quick win',
     reward: '15 minutes guilt-free scrolling',
     done: false,
+    recurrence: 'none',
+    deadlineType: 'none',
     objectives: [
       { id: 'side-1-1', title: 'Pick one person', cardPower: 4, done: false },
       { id: 'side-1-2', title: 'Send the message', cardPower: 5, done: false },
@@ -104,6 +140,8 @@ const defaultSideQuests: Quest[] = [
     difficulty: 'Easy',
     reward: 'Fresh coffee after cleanup',
     done: false,
+    recurrence: 'none',
+    deadlineType: 'none',
     objectives: [
       { id: 'side-2-1', title: 'Choose one desk or counter', cardPower: 4, done: false },
       { id: 'side-2-2', title: 'Throw away trash', cardPower: 5, done: false },
@@ -117,6 +155,8 @@ const defaultSideQuests: Quest[] = [
     difficulty: 'Medium',
     reward: 'New sticker unlock',
     done: false,
+    recurrence: 'none',
+    deadlineType: 'none',
     objectives: [
       { id: 'side-3-1', title: 'Set a 15-minute timer', cardPower: 6, done: false },
       { id: 'side-3-2', title: 'Read without phone', cardPower: 7, done: false },
@@ -131,6 +171,8 @@ const defaultMainQuests: Quest[] = [
     title: 'Hit a 5-day streak',
     reward: 'Weekend cafe visit',
     done: false,
+    recurrence: 'weekly',
+    deadlineType: 'endOfWeek',
     objectives: [
       { id: 'main-1-1', title: 'Finish 3 daily quests each day', cardPower: 8, done: false },
       { id: 'main-1-2', title: 'Keep the streak alive tonight', cardPower: 10, done: false },
@@ -141,6 +183,8 @@ const defaultMainQuests: Quest[] = [
     title: 'Launch Quest Cat v1',
     reward: 'Buy a custom cat icon pack',
     done: false,
+    recurrence: 'none',
+    deadlineType: 'none',
     objectives: [
       { id: 'main-2-1', title: 'Finish quest list layout', cardPower: 8, done: false },
       { id: 'main-2-2', title: 'Define reward system', cardPower: 9, done: false },
@@ -165,6 +209,108 @@ function getDailyProgressLabel(quest: DailyQuest) {
   return `${quest.progressCount} / ${quest.targetCount} cards played`;
 }
 
+function getStartOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getStartOfWeek(date: Date) {
+  const start = getStartOfDay(date);
+  const day = start.getDay();
+  start.setDate(start.getDate() - day);
+  return start;
+}
+
+function getEndOfDay(date: Date) {
+  const end = getStartOfDay(date);
+  end.setHours(23, 59, 59, 999);
+  return end;
+}
+
+function getEndOfWeek(date: Date) {
+  const end = getStartOfWeek(date);
+  end.setDate(end.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return end;
+}
+
+function resolveDeadlineAt(deadlineType: DeadlineType, deadlineAt?: string, now = new Date()) {
+  if (deadlineType === 'endOfDay') {
+    return getEndOfDay(now).toISOString();
+  }
+
+  if (deadlineType === 'endOfWeek') {
+    return getEndOfWeek(now).toISOString();
+  }
+
+  if (deadlineType === 'custom' && deadlineAt) {
+    const customDate = new Date(deadlineAt);
+
+    if (!Number.isNaN(customDate.getTime())) {
+      return getEndOfDay(customDate).toISOString();
+    }
+  }
+
+  return undefined;
+}
+
+function normalizeDeadlineAt(deadlineType: DeadlineType, deadlineAt?: string) {
+  return deadlineType === 'custom' ? deadlineAt || undefined : undefined;
+}
+
+function formatDeadline(deadlineType: DeadlineType, deadlineAt?: string) {
+  const resolvedDeadline = resolveDeadlineAt(deadlineType, deadlineAt);
+
+  if (!resolvedDeadline) {
+    return 'No time limit';
+  }
+
+  const date = new Date(resolvedDeadline);
+
+  if (deadlineType === 'endOfDay') {
+    return 'Due by end of day';
+  }
+
+  if (deadlineType === 'endOfWeek') {
+    return 'Due by end of week';
+  }
+
+  return `Due ${date.toLocaleDateString()}`;
+}
+
+function formatRecurrence(recurrence: Recurrence) {
+  if (recurrence === 'daily') {
+    return 'Repeats daily';
+  }
+
+  if (recurrence === 'weekly') {
+    return 'Repeats weekly';
+  }
+
+  return 'One-time quest';
+}
+
+function shouldResetRecurring(completedAt: string | undefined, recurrence: Recurrence, now = new Date()) {
+  if (!completedAt || recurrence === 'none') {
+    return false;
+  }
+
+  const completedDate = new Date(completedAt);
+
+  if (Number.isNaN(completedDate.getTime())) {
+    return false;
+  }
+
+  if (recurrence === 'daily') {
+    return getStartOfDay(now).getTime() > getStartOfDay(completedDate).getTime();
+  }
+
+  if (recurrence === 'weekly') {
+    return getStartOfWeek(now).getTime() > getStartOfWeek(completedDate).getTime();
+  }
+
+  return false;
+}
+
 function getQuestCompletion(quest: Quest) {
   const objectiveCount = quest.objectives.length;
   const completedObjectives = quest.objectives.filter((objective) => objective.done).length;
@@ -175,6 +321,10 @@ function getQuestCompletion(quest: Quest) {
     progressLabel:
       objectiveCount === 0 ? 'No sub quests yet' : `${completedObjectives} / ${objectiveCount} cards played`,
   };
+}
+
+function isQuestComplete(quest: Quest) {
+  return quest.objectives.length > 0 && quest.objectives.every((objective) => objective.done);
 }
 
 function slugWords(value: string) {
@@ -241,6 +391,7 @@ function buildInitialState(): AppState {
     dailyQuests: defaultDailyQuests,
     sideQuests: defaultSideQuests,
     mainQuests: defaultMainQuests,
+    completionHistory: [],
   };
 }
 
@@ -258,6 +409,10 @@ function normalizeDailyQuest(
     targetCount,
     progressCount,
     cardPower: Math.max(1, Number(quest.cardPower ?? 3)),
+    recurrence: quest.recurrence ?? 'daily',
+    deadlineType: quest.deadlineType ?? 'endOfDay',
+    deadlineAt: normalizeDeadlineAt(quest.deadlineType ?? 'endOfDay', quest.deadlineAt),
+    completedAt: quest.completedAt,
   };
 }
 
@@ -310,6 +465,21 @@ function normalizeQuest(quest: Partial<Quest>) {
     reward: quest.reward ?? 'Mystery reward',
     done,
     objectives,
+    recurrence: quest.recurrence ?? 'none',
+    deadlineType: quest.deadlineType ?? 'none',
+    deadlineAt: normalizeDeadlineAt(quest.deadlineType ?? 'none', quest.deadlineAt),
+    completedAt: quest.completedAt,
+  };
+}
+
+function normalizeHistoryEntry(entry: Partial<QuestHistoryEntry>) {
+  return {
+    id: entry.id ?? createId('history'),
+    family: (entry.family as QuestHistoryEntry['family']) ?? 'side',
+    questId: entry.questId ?? createId('quest-ref'),
+    title: entry.title ?? 'Completed quest',
+    reward: entry.reward ?? 'Reward claimed',
+    completedAt: entry.completedAt ?? new Date().toISOString(),
   };
 }
 
@@ -320,6 +490,7 @@ function loadInitialState() {
 
   const savedState =
     window.localStorage.getItem(STORAGE_KEY) ??
+    window.localStorage.getItem('quest-cat-state-v5') ??
     window.localStorage.getItem('quest-cat-state-v3') ??
     window.localStorage.getItem('quest-cat-state-v2') ??
     window.localStorage.getItem('quest-cat-state-v1');
@@ -341,6 +512,9 @@ function loadInitialState() {
       mainQuests: Array.isArray(parsedState.mainQuests)
         ? parsedState.mainQuests.map((quest) => normalizeQuest(quest))
         : defaultMainQuests,
+      completionHistory: Array.isArray(parsedState.completionHistory)
+        ? parsedState.completionHistory.map((entry) => normalizeHistoryEntry(entry))
+        : [],
     };
   } catch {
     return buildInitialState();
@@ -587,6 +761,7 @@ export default function App() {
   const [dailyQuests, setDailyQuests] = useState(initialState.dailyQuests);
   const [sideQuests, setSideQuests] = useState(initialState.sideQuests);
   const [mainQuests, setMainQuests] = useState(initialState.mainQuests);
+  const [completionHistory, setCompletionHistory] = useState(initialState.completionHistory);
   const [builderMode, setBuilderMode] = useState<'daily' | 'side' | 'main' | null>('side');
   const [selectedBoard, setSelectedBoard] = useState<BoardSelection | null>(null);
   const [lastPlayedId, setLastPlayedId] = useState<string | null>(null);
@@ -596,6 +771,9 @@ export default function App() {
   const [dailyXp, setDailyXp] = useState('10');
   const [dailyTarget, setDailyTarget] = useState('1');
   const [dailyPower, setDailyPower] = useState('3');
+  const [dailyRecurrence, setDailyRecurrence] = useState<Recurrence>('daily');
+  const [dailyDeadlineType, setDailyDeadlineType] = useState<DeadlineType>('endOfDay');
+  const [dailyDeadlineAt, setDailyDeadlineAt] = useState('');
 
   const [sideTitle, setSideTitle] = useState('');
   const [sideXp, setSideXp] = useState('10');
@@ -604,19 +782,62 @@ export default function App() {
   const [sideMonsterMode, setSideMonsterMode] = useState<'auto' | 'custom'>('auto');
   const [sideMonsterName, setSideMonsterName] = useState('');
   const [sideCards, setSideCards] = useState<DraftCard[]>([createDraftCard('6')]);
+  const [sideRecurrence, setSideRecurrence] = useState<Recurrence>('none');
+  const [sideDeadlineType, setSideDeadlineType] = useState<DeadlineType>('none');
+  const [sideDeadlineAt, setSideDeadlineAt] = useState('');
 
   const [mainTitle, setMainTitle] = useState('');
   const [mainReward, setMainReward] = useState('');
   const [mainMonsterMode, setMainMonsterMode] = useState<'auto' | 'custom'>('auto');
   const [mainMonsterName, setMainMonsterName] = useState('');
   const [mainCards, setMainCards] = useState<DraftCard[]>([createDraftCard('10')]);
+  const [mainRecurrence, setMainRecurrence] = useState<Recurrence>('none');
+  const [mainDeadlineType, setMainDeadlineType] = useState<DeadlineType>('none');
+  const [mainDeadlineAt, setMainDeadlineAt] = useState('');
 
   useEffect(() => {
     window.localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ dailyQuests, sideQuests, mainQuests }),
+      JSON.stringify({ dailyQuests, sideQuests, mainQuests, completionHistory }),
     );
-  }, [dailyQuests, sideQuests, mainQuests]);
+  }, [completionHistory, dailyQuests, sideQuests, mainQuests]);
+
+  useEffect(() => {
+    function resetRecurringQuests() {
+      const now = new Date();
+
+      setDailyQuests((current) =>
+        current.map((quest) =>
+          shouldResetRecurring(quest.completedAt, quest.recurrence, now)
+            ? { ...quest, progressCount: 0, completedAt: undefined }
+            : quest,
+        ),
+      );
+
+      const resetQuestCollection = (setter: Dispatch<SetStateAction<Quest[]>>) => {
+        setter((current) =>
+          current.map((quest) =>
+            shouldResetRecurring(quest.completedAt, quest.recurrence, now)
+              ? {
+                  ...quest,
+                  done: false,
+                  completedAt: undefined,
+                  objectives: quest.objectives.map((objective) => ({ ...objective, done: false })),
+                }
+              : quest,
+          ),
+        );
+      };
+
+      resetQuestCollection(setSideQuests);
+      resetQuestCollection(setMainQuests);
+    }
+
+    resetRecurringQuests();
+    const intervalId = window.setInterval(resetRecurringQuests, 60_000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const completedCount = dailyQuests.filter((quest) => isDailyQuestComplete(quest)).length;
   const completedSideCount = sideQuests.filter((quest) => quest.done).length;
@@ -627,6 +848,13 @@ export default function App() {
   const sideQuestXp = sideQuests.reduce((total, quest) => total + (quest.xp ?? 0), 0);
   const totalXp = baseXp + earnedXp;
   const rankProgress = getRankProgress(totalXp);
+  const recentHistory = useMemo(
+    () =>
+      [...completionHistory].sort(
+        (left, right) => new Date(right.completedAt).getTime() - new Date(left.completedAt).getTime(),
+      ),
+    [completionHistory],
+  );
 
   const activeBattle = useMemo(
     () =>
@@ -635,6 +863,33 @@ export default function App() {
         : null,
     [dailyQuests, mainQuests, selectedBoard, sideQuests],
   );
+
+  function logQuestCompletion(entry: Omit<QuestHistoryEntry, 'id' | 'completedAt'>, completedAt: string) {
+    setCompletionHistory((current) => [
+      {
+        id: createId('history'),
+        completedAt,
+        ...entry,
+      },
+      ...current,
+    ]);
+  }
+
+  function buildQuestHistoryEntry(
+    family: QuestHistoryEntry['family'],
+    quest: Pick<Quest, 'id' | 'title' | 'reward'>,
+  ) {
+    return {
+      family,
+      questId: quest.id,
+      title: quest.title,
+      reward: quest.reward,
+    } satisfies Omit<QuestHistoryEntry, 'id' | 'completedAt'>;
+  }
+
+  function hasValidDeadline(deadlineType: DeadlineType, deadlineAt: string) {
+    return deadlineType !== 'custom' || Boolean(deadlineAt);
+  }
 
   function addDailyQuest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -651,7 +906,8 @@ export default function App() {
       Number.isNaN(targetCount) ||
       targetCount < 1 ||
       Number.isNaN(cardPower) ||
-      cardPower < 1
+      cardPower < 1 ||
+      !hasValidDeadline(dailyDeadlineType, dailyDeadlineAt)
     ) {
       return;
     }
@@ -665,12 +921,18 @@ export default function App() {
         targetCount,
         progressCount: 0,
         cardPower,
+        recurrence: dailyRecurrence,
+        deadlineType: dailyDeadlineType,
+        deadlineAt: normalizeDeadlineAt(dailyDeadlineType, dailyDeadlineAt),
       },
     ]);
     setDailyTitle('');
     setDailyXp('10');
     setDailyTarget('1');
     setDailyPower('3');
+    setDailyRecurrence('daily');
+    setDailyDeadlineType('endOfDay');
+    setDailyDeadlineAt('');
   }
 
   function updateDraftCard(
@@ -703,7 +965,14 @@ export default function App() {
     const xp = Number(sideXp);
     const objectives = normalizeDraftCards(sideCards, Math.max(4, Math.ceil((xp || 12) / 2)));
 
-    if (!title || !reward || Number.isNaN(xp) || xp < 0 || objectives.length === 0) {
+    if (
+      !title ||
+      !reward ||
+      Number.isNaN(xp) ||
+      xp < 0 ||
+      objectives.length === 0 ||
+      !hasValidDeadline(sideDeadlineType, sideDeadlineAt)
+    ) {
       return;
     }
 
@@ -718,6 +987,9 @@ export default function App() {
         reward,
         done: false,
         objectives,
+        recurrence: sideRecurrence,
+        deadlineType: sideDeadlineType,
+        deadlineAt: normalizeDeadlineAt(sideDeadlineType, sideDeadlineAt),
       },
     ]);
     setSideTitle('');
@@ -727,6 +999,9 @@ export default function App() {
     setSideMonsterMode('auto');
     setSideMonsterName('');
     setSideCards([createDraftCard('6')]);
+    setSideRecurrence('none');
+    setSideDeadlineType('none');
+    setSideDeadlineAt('');
   }
 
   function addMainQuest(event: FormEvent<HTMLFormElement>) {
@@ -736,7 +1011,7 @@ export default function App() {
     const reward = mainReward.trim();
     const objectives = normalizeDraftCards(mainCards, 8);
 
-    if (!title || !reward || objectives.length === 0) {
+    if (!title || !reward || objectives.length === 0 || !hasValidDeadline(mainDeadlineType, mainDeadlineAt)) {
       return;
     }
 
@@ -749,6 +1024,9 @@ export default function App() {
         reward,
         done: false,
         objectives,
+        recurrence: mainRecurrence,
+        deadlineType: mainDeadlineType,
+        deadlineAt: normalizeDeadlineAt(mainDeadlineType, mainDeadlineAt),
       },
     ]);
     setMainTitle('');
@@ -756,16 +1034,44 @@ export default function App() {
     setMainMonsterMode('auto');
     setMainMonsterName('');
     setMainCards([createDraftCard('10')]);
+    setMainRecurrence('none');
+    setMainDeadlineType('none');
+    setMainDeadlineAt('');
   }
 
   function setDailyQuestProgress(questId: string, progressCount: number) {
+    const completedAt = new Date().toISOString();
+    let historyEntry: Omit<QuestHistoryEntry, 'id' | 'completedAt'> | null = null;
+
     setDailyQuests((current) =>
-      current.map((quest) =>
-        quest.id === questId
-          ? { ...quest, progressCount: clampCount(progressCount, 0, quest.targetCount) }
-          : quest,
-      ),
+      current.map((quest) => {
+        if (quest.id !== questId) {
+          return quest;
+        }
+
+        const nextProgress = clampCount(progressCount, 0, quest.targetCount);
+        const nextDone = nextProgress >= quest.targetCount;
+
+        if (!isDailyQuestComplete(quest) && nextDone) {
+          historyEntry = {
+            family: 'daily',
+            questId: quest.id,
+            title: quest.title,
+            reward: `${quest.xp} XP`,
+          };
+        }
+
+        return {
+          ...quest,
+          progressCount: nextProgress,
+          completedAt: nextDone ? quest.completedAt ?? completedAt : undefined,
+        };
+      }),
     );
+
+    if (historyEntry) {
+      logQuestCompletion(historyEntry, completedAt);
+    }
   }
 
   function updateBattleFeedback(cardId: string | null) {
@@ -781,17 +1087,45 @@ export default function App() {
     updateBattleFeedback(cardId);
 
     if (selectedBoard.kind === 'daily') {
+      const completedAt = new Date().toISOString();
+      let historyEntry: Omit<QuestHistoryEntry, 'id' | 'completedAt'> | null = null;
+
       setDailyQuests((current) =>
-        current.map((quest) =>
-          cardId.startsWith(`${quest.id}-card-`)
-            ? { ...quest, progressCount: clampCount(quest.progressCount + 1, 0, quest.targetCount) }
-            : quest,
-        ),
+        current.map((quest) => {
+          if (!cardId.startsWith(`${quest.id}-card-`)) {
+            return quest;
+          }
+
+          const nextProgress = clampCount(quest.progressCount + 1, 0, quest.targetCount);
+
+          if (!isDailyQuestComplete(quest) && nextProgress >= quest.targetCount) {
+            historyEntry = {
+              family: 'daily',
+              questId: quest.id,
+              title: quest.title,
+              reward: `${quest.xp} XP`,
+            };
+          }
+
+          return {
+            ...quest,
+            progressCount: nextProgress,
+            completedAt: nextProgress >= quest.targetCount ? quest.completedAt ?? completedAt : undefined,
+          };
+        }),
       );
+
+      if (historyEntry) {
+        logQuestCompletion(historyEntry, completedAt);
+      }
       return;
     }
 
     const setter = selectedBoard.kind === 'side' ? setSideQuests : setMainQuests;
+    const activeQuestList = selectedBoard.kind === 'side' ? sideQuests : mainQuests;
+    const priorQuest = activeQuestList.find((quest) => quest.id === selectedBoard.questId);
+    const completedAt = new Date().toISOString();
+
     setter((current) =>
       current.map((quest) =>
         quest.id === selectedBoard.questId
@@ -803,10 +1137,24 @@ export default function App() {
               done: quest.objectives.every((objective) =>
                 objective.id === cardId ? true : objective.done,
               ),
+              completedAt:
+                quest.objectives.every((objective) =>
+                  objective.id === cardId ? true : objective.done,
+                )
+                  ? quest.completedAt ?? completedAt
+                  : undefined,
             }
           : quest,
       ),
     );
+
+    if (
+      priorQuest &&
+      !priorQuest.done &&
+      priorQuest.objectives.every((objective) => (objective.id === cardId ? true : objective.done))
+    ) {
+      logQuestCompletion(buildQuestHistoryEntry(selectedBoard.kind, priorQuest), completedAt);
+    }
   }
 
   function recallBattleCard(cardId: string) {
@@ -820,7 +1168,11 @@ export default function App() {
       setDailyQuests((current) =>
         current.map((quest) =>
           cardId.startsWith(`${quest.id}-card-`)
-            ? { ...quest, progressCount: clampCount(quest.progressCount - 1, 0, quest.targetCount) }
+            ? {
+                ...quest,
+                progressCount: clampCount(quest.progressCount - 1, 0, quest.targetCount),
+                completedAt: undefined,
+              }
             : quest,
         ),
       );
@@ -842,6 +1194,7 @@ export default function App() {
           ...quest,
           objectives,
           done: objectives.every((objective) => objective.done),
+          completedAt: objectives.every((objective) => objective.done) ? quest.completedAt : undefined,
         };
       }),
     );
@@ -856,7 +1209,9 @@ export default function App() {
     setHitCount(0);
 
     if (selectedBoard.kind === 'daily') {
-      setDailyQuests((current) => current.map((quest) => ({ ...quest, progressCount: 0 })));
+      setDailyQuests((current) =>
+        current.map((quest) => ({ ...quest, progressCount: 0, completedAt: undefined })),
+      );
       return;
     }
 
@@ -867,6 +1222,7 @@ export default function App() {
           ? {
               ...quest,
               done: false,
+              completedAt: undefined,
               objectives: quest.objectives.map((objective) => ({ ...objective, done: false })),
             }
           : quest,
@@ -880,43 +1236,76 @@ export default function App() {
 
   function toggleQuest(
     questId: string,
+    kind: 'side' | 'main',
     setter: Dispatch<SetStateAction<Quest[]>>,
   ) {
+    const completedAt = new Date().toISOString();
+    let historyEntry: Omit<QuestHistoryEntry, 'id' | 'completedAt'> | null = null;
+
     setter((current) =>
       current.map((quest) =>
         quest.id === questId
-          ? {
-              ...quest,
-              done: !quest.done,
-              objectives: quest.objectives.map((objective) => ({ ...objective, done: !quest.done })),
-            }
+          ? (() => {
+              const nextDone = !quest.done;
+              const objectives = quest.objectives.map((objective) => ({ ...objective, done: nextDone }));
+
+              if (!quest.done && nextDone) {
+                historyEntry = buildQuestHistoryEntry(kind, quest);
+              }
+
+              return {
+                ...quest,
+                done: nextDone,
+                completedAt: nextDone ? quest.completedAt ?? completedAt : undefined,
+                objectives,
+              };
+            })()
           : quest,
       ),
     );
+
+    if (historyEntry) {
+      logQuestCompletion(historyEntry, completedAt);
+    }
   }
 
   function toggleObjective(
     questId: string,
     objectiveId: string,
+    kind: 'side' | 'main',
     setter: Dispatch<SetStateAction<Quest[]>>,
   ) {
+    const completedAt = new Date().toISOString();
+    let historyEntry: Omit<QuestHistoryEntry, 'id' | 'completedAt'> | null = null;
+
     setter((current) =>
       current.map((quest) => {
         if (quest.id !== questId) {
           return quest;
         }
 
+        const wasComplete = isQuestComplete(quest);
         const objectives = quest.objectives.map((objective) =>
           objective.id === objectiveId ? { ...objective, done: !objective.done } : objective,
         );
+        const nextDone = objectives.length > 0 && objectives.every((objective) => objective.done);
+
+        if (!wasComplete && nextDone) {
+          historyEntry = buildQuestHistoryEntry(kind, quest);
+        }
 
         return {
           ...quest,
           objectives,
-          done: objectives.every((objective) => objective.done),
+          done: nextDone,
+          completedAt: nextDone ? quest.completedAt ?? completedAt : undefined,
         };
       }),
     );
+
+    if (historyEntry) {
+      logQuestCompletion(historyEntry, completedAt);
+    }
   }
 
   function deleteQuest(
@@ -982,6 +1371,25 @@ export default function App() {
               <input min="1" onChange={(event) => setDailyTarget(event.target.value)} placeholder="Number of cards" type="number" value={dailyTarget} />
             </div>
             <input min="1" onChange={(event) => setDailyPower(event.target.value)} placeholder="Damage per card" type="number" value={dailyPower} />
+            <div className="form-grid">
+              <select onChange={(event) => setDailyRecurrence(event.target.value as Recurrence)} value={dailyRecurrence}>
+                {recurrenceOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <select onChange={(event) => setDailyDeadlineType(event.target.value as DeadlineType)} value={dailyDeadlineType}>
+                {deadlineOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {dailyDeadlineType === 'custom' ? (
+              <input onChange={(event) => setDailyDeadlineAt(event.target.value)} type="date" value={dailyDeadlineAt} />
+            ) : null}
             <button className="primary-button form-button" type="submit">
               Add Daily Card Deck
             </button>
@@ -998,6 +1406,25 @@ export default function App() {
               <input onChange={(event) => setSideDifficulty(event.target.value)} placeholder="Difficulty" value={sideDifficulty} />
             </div>
             <input onChange={(event) => setSideReward(event.target.value)} placeholder="Reward for completion" value={sideReward} />
+            <div className="form-grid">
+              <select onChange={(event) => setSideRecurrence(event.target.value as Recurrence)} value={sideRecurrence}>
+                {recurrenceOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <select onChange={(event) => setSideDeadlineType(event.target.value as DeadlineType)} value={sideDeadlineType}>
+                {deadlineOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {sideDeadlineType === 'custom' ? (
+              <input onChange={(event) => setSideDeadlineAt(event.target.value)} type="date" value={sideDeadlineAt} />
+            ) : null}
             <div className="monster-mode-row" role="group" aria-label="Monster naming">
               <button
                 className={`ghost-button ${sideMonsterMode === 'auto' ? 'is-selected' : ''}`}
@@ -1055,6 +1482,25 @@ export default function App() {
             <p className="form-note">Create a larger boss battle with a completion reward and a full hand of cards.</p>
             <input onChange={(event) => setMainTitle(event.target.value)} placeholder="Main quest title" value={mainTitle} />
             <input onChange={(event) => setMainReward(event.target.value)} placeholder="Reward for completion" value={mainReward} />
+            <div className="form-grid">
+              <select onChange={(event) => setMainRecurrence(event.target.value as Recurrence)} value={mainRecurrence}>
+                {recurrenceOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <select onChange={(event) => setMainDeadlineType(event.target.value as DeadlineType)} value={mainDeadlineType}>
+                {deadlineOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {mainDeadlineType === 'custom' ? (
+              <input onChange={(event) => setMainDeadlineAt(event.target.value)} type="date" value={mainDeadlineAt} />
+            ) : null}
             <div className="monster-mode-row" role="group" aria-label="Main quest monster naming">
               <button
                 className={`ghost-button ${mainMonsterMode === 'auto' ? 'is-selected' : ''}`}
@@ -1131,6 +1577,9 @@ export default function App() {
                     <span aria-hidden="true">·</span>
                     {getDailyProgressLabel(quest)}
                   </small>
+                  <small className="quest-rule-copy">
+                    {formatRecurrence(quest.recurrence)} <span aria-hidden="true">·</span> {formatDeadline(quest.deadlineType, quest.deadlineAt)}
+                  </small>
                 </div>
               </div>
               <div className="mini-stepper" aria-label={`${quest.title} progress`}>
@@ -1177,6 +1626,9 @@ export default function App() {
                     <small className="deck-card-meta">
                       {quest.difficulty} <span aria-hidden="true">·</span> {completion.progressLabel}
                     </small>
+                    <small className="quest-rule-copy">
+                      {formatRecurrence(quest.recurrence)} <span aria-hidden="true">·</span> {formatDeadline(quest.deadlineType, quest.deadlineAt)}
+                    </small>
                     <p className="reward-pill">Reward: {quest.reward}</p>
                   </div>
                 </div>
@@ -1184,7 +1636,7 @@ export default function App() {
                   {quest.objectives.map((objective) => (
                     <li key={objective.id}>
                       <label className="objective-check">
-                        <input checked={objective.done} onChange={() => toggleObjective(quest.id, objective.id, setSideQuests)} type="checkbox" />
+                        <input checked={objective.done} onChange={() => toggleObjective(quest.id, objective.id, 'side', setSideQuests)} type="checkbox" />
                         <span>
                           {objective.title}
                           <small className="objective-power">{objective.cardPower} dmg</small>
@@ -1227,6 +1679,9 @@ export default function App() {
                   <div className="deck-card-copy">
                     <strong>{quest.title}</strong>
                     <small className="deck-card-meta">{completion.progressLabel}</small>
+                    <small className="quest-rule-copy">
+                      {formatRecurrence(quest.recurrence)} <span aria-hidden="true">·</span> {formatDeadline(quest.deadlineType, quest.deadlineAt)}
+                    </small>
                     <p className="reward-pill">Reward: {quest.reward}</p>
                   </div>
                 </div>
@@ -1234,7 +1689,7 @@ export default function App() {
                   {quest.objectives.map((objective) => (
                     <li key={objective.id}>
                       <label className="objective-check">
-                        <input checked={objective.done} onChange={() => toggleObjective(quest.id, objective.id, setMainQuests)} type="checkbox" />
+                        <input checked={objective.done} onChange={() => toggleObjective(quest.id, objective.id, 'main', setMainQuests)} type="checkbox" />
                         <span>
                           {objective.title}
                           <small className="objective-power">{objective.cardPower} dmg</small>
@@ -1258,9 +1713,35 @@ export default function App() {
 
       </section>
 
-      <section className="install-tip" aria-label="Install instructions">
-        <p>On iPhone: open this site in Safari, tap Share, then Add to Home Screen.</p>
+      <section className="section">
+        <div className="section-heading">
+          <h2>Completed History</h2>
+          <span>{recentHistory.length} clears logged</span>
+        </div>
+        <div className="card-stack">
+          {recentHistory.length === 0 ? (
+            <article className="game-card list-card history-card">
+              <strong>No completed quests yet</strong>
+              <small>When you clear quests, their completion date will be saved here.</small>
+            </article>
+          ) : (
+            recentHistory.map((entry) => (
+              <article className="game-card list-card history-card" key={entry.id}>
+                <div className="battle-card-topline">
+                  <span className="battle-card-type">{entry.family} clear</span>
+                  <span className="battle-stat-chip">{new Date(entry.completedAt).toLocaleDateString()}</span>
+                </div>
+                <div className="deck-card-copy">
+                  <strong>{entry.title}</strong>
+                  <small>{new Date(entry.completedAt).toLocaleString()}</small>
+                  <p className="reward-pill">Reward: {entry.reward}</p>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
       </section>
+
     </main>
   );
 }
