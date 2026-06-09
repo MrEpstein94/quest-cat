@@ -4,6 +4,17 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# Load the user's shell exports when the script is launched by npm/non-interactive shells.
+if [[ -f "$HOME/.zshrc" ]]; then
+  # shellcheck disable=SC1090
+  source "$HOME/.zshrc"
+fi
+
+if [[ -f "$HOME/.zprofile" ]]; then
+  # shellcheck disable=SC1090
+  source "$HOME/.zprofile"
+fi
+
 if ! git diff --quiet || ! git diff --cached --quiet; then
   echo "Working tree is not clean. Commit your changes before running deploy:live." >&2
   exit 1
