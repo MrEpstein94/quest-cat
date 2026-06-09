@@ -570,6 +570,10 @@ h1 {
   gap: 12px;
 }
 
+.edit-form {
+  margin-top: 4px;
+}
+
 .quest-form h3 {
   margin: 0;
   color: #fff7dc;
@@ -644,6 +648,18 @@ h1 {
 
 .form-button {
   margin-top: 0;
+}
+
+.edit-form-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.compact-primary-button {
+  margin-top: 0;
+  padding: 14px 16px;
+  border-radius: 18px;
 }
 
 .primary-button {

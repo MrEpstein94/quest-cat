@@ -433,6 +433,14 @@ function createDraftCard(defaultPower = '4'): DraftCard {
   };
 }
 
+function objectivesToDraftCards(objectives: Objective[]) {
+  return objectives.map((objective) => ({
+    id: createId('draft-card'),
+    title: objective.title,
+    cardPower: String(objective.cardPower),
+  }));
+}
+
 function normalizeDraftCards(cards: DraftCard[], fallbackBasePower: number) {
   return cards
     .map((card, index) => ({
@@ -774,6 +782,14 @@ export default function App() {
   const [dailyRecurrence, setDailyRecurrence] = useState<Recurrence>('daily');
   const [dailyDeadlineType, setDailyDeadlineType] = useState<DeadlineType>('endOfDay');
   const [dailyDeadlineAt, setDailyDeadlineAt] = useState('');
+  const [editingDailyId, setEditingDailyId] = useState<string | null>(null);
+  const [editingDailyTitle, setEditingDailyTitle] = useState('');
+  const [editingDailyXp, setEditingDailyXp] = useState('10');
+  const [editingDailyTarget, setEditingDailyTarget] = useState('1');
+  const [editingDailyPower, setEditingDailyPower] = useState('3');
+  const [editingDailyRecurrence, setEditingDailyRecurrence] = useState<Recurrence>('daily');
+  const [editingDailyDeadlineType, setEditingDailyDeadlineType] = useState<DeadlineType>('endOfDay');
+  const [editingDailyDeadlineAt, setEditingDailyDeadlineAt] = useState('');
 
   const [sideTitle, setSideTitle] = useState('');
   const [sideXp, setSideXp] = useState('10');
@@ -785,6 +801,17 @@ export default function App() {
   const [sideRecurrence, setSideRecurrence] = useState<Recurrence>('none');
   const [sideDeadlineType, setSideDeadlineType] = useState<DeadlineType>('none');
   const [sideDeadlineAt, setSideDeadlineAt] = useState('');
+  const [editingSideId, setEditingSideId] = useState<string | null>(null);
+  const [editingSideTitle, setEditingSideTitle] = useState('');
+  const [editingSideXp, setEditingSideXp] = useState('10');
+  const [editingSideDifficulty, setEditingSideDifficulty] = useState('');
+  const [editingSideReward, setEditingSideReward] = useState('');
+  const [editingSideMonsterMode, setEditingSideMonsterMode] = useState<'auto' | 'custom'>('auto');
+  const [editingSideMonsterName, setEditingSideMonsterName] = useState('');
+  const [editingSideCards, setEditingSideCards] = useState<DraftCard[]>([createDraftCard('6')]);
+  const [editingSideRecurrence, setEditingSideRecurrence] = useState<Recurrence>('none');
+  const [editingSideDeadlineType, setEditingSideDeadlineType] = useState<DeadlineType>('none');
+  const [editingSideDeadlineAt, setEditingSideDeadlineAt] = useState('');
 
   const [mainTitle, setMainTitle] = useState('');
   const [mainReward, setMainReward] = useState('');
@@ -794,6 +821,15 @@ export default function App() {
   const [mainRecurrence, setMainRecurrence] = useState<Recurrence>('none');
   const [mainDeadlineType, setMainDeadlineType] = useState<DeadlineType>('none');
   const [mainDeadlineAt, setMainDeadlineAt] = useState('');
+  const [editingMainId, setEditingMainId] = useState<string | null>(null);
+  const [editingMainTitle, setEditingMainTitle] = useState('');
+  const [editingMainReward, setEditingMainReward] = useState('');
+  const [editingMainMonsterMode, setEditingMainMonsterMode] = useState<'auto' | 'custom'>('auto');
+  const [editingMainMonsterName, setEditingMainMonsterName] = useState('');
+  const [editingMainCards, setEditingMainCards] = useState<DraftCard[]>([createDraftCard('10')]);
+  const [editingMainRecurrence, setEditingMainRecurrence] = useState<Recurrence>('none');
+  const [editingMainDeadlineType, setEditingMainDeadlineType] = useState<DeadlineType>('none');
+  const [editingMainDeadlineAt, setEditingMainDeadlineAt] = useState('');
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -1037,6 +1073,189 @@ export default function App() {
     setMainRecurrence('none');
     setMainDeadlineType('none');
     setMainDeadlineAt('');
+  }
+
+  function startEditingDailyQuest(quest: DailyQuest) {
+    setEditingDailyId(quest.id);
+    setEditingDailyTitle(quest.title);
+    setEditingDailyXp(String(quest.xp));
+    setEditingDailyTarget(String(quest.targetCount));
+    setEditingDailyPower(String(quest.cardPower));
+    setEditingDailyRecurrence(quest.recurrence);
+    setEditingDailyDeadlineType(quest.deadlineType);
+    setEditingDailyDeadlineAt(quest.deadlineAt ?? '');
+  }
+
+  function cancelEditingDailyQuest() {
+    setEditingDailyId(null);
+  }
+
+  function saveDailyQuestEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingDailyId) {
+      return;
+    }
+
+    const title = editingDailyTitle.trim();
+    const xp = Number(editingDailyXp);
+    const targetCount = Number(editingDailyTarget);
+    const cardPower = Number(editingDailyPower);
+
+    if (
+      !title ||
+      Number.isNaN(xp) ||
+      xp < 0 ||
+      Number.isNaN(targetCount) ||
+      targetCount < 1 ||
+      Number.isNaN(cardPower) ||
+      cardPower < 1 ||
+      !hasValidDeadline(editingDailyDeadlineType, editingDailyDeadlineAt)
+    ) {
+      return;
+    }
+
+    setDailyQuests((current) =>
+      current.map((quest) => {
+        if (quest.id !== editingDailyId) {
+          return quest;
+        }
+
+        const nextProgress = clampCount(quest.progressCount, 0, targetCount);
+        return {
+          ...quest,
+          title,
+          xp,
+          targetCount,
+          progressCount: nextProgress,
+          cardPower,
+          recurrence: editingDailyRecurrence,
+          deadlineType: editingDailyDeadlineType,
+          deadlineAt: normalizeDeadlineAt(editingDailyDeadlineType, editingDailyDeadlineAt),
+          completedAt: nextProgress >= targetCount ? quest.completedAt ?? new Date().toISOString() : undefined,
+        };
+      }),
+    );
+
+    cancelEditingDailyQuest();
+  }
+
+  function startEditingSideQuest(quest: Quest) {
+    setEditingSideId(quest.id);
+    setEditingSideTitle(quest.title);
+    setEditingSideXp(String(quest.xp ?? 0));
+    setEditingSideDifficulty(quest.difficulty ?? '');
+    setEditingSideReward(quest.reward);
+    setEditingSideMonsterMode(quest.monsterName ? 'custom' : 'auto');
+    setEditingSideMonsterName(quest.monsterName ?? '');
+    setEditingSideCards(objectivesToDraftCards(quest.objectives));
+    setEditingSideRecurrence(quest.recurrence);
+    setEditingSideDeadlineType(quest.deadlineType);
+    setEditingSideDeadlineAt(quest.deadlineAt ?? '');
+  }
+
+  function cancelEditingSideQuest() {
+    setEditingSideId(null);
+  }
+
+  function saveSideQuestEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingSideId) {
+      return;
+    }
+
+    const title = editingSideTitle.trim();
+    const reward = editingSideReward.trim();
+    const xp = Number(editingSideXp);
+    const objectives = normalizeDraftCards(editingSideCards, Math.max(4, Math.ceil((xp || 12) / 2)));
+
+    if (
+      !title ||
+      !reward ||
+      Number.isNaN(xp) ||
+      xp < 0 ||
+      objectives.length === 0 ||
+      !hasValidDeadline(editingSideDeadlineType, editingSideDeadlineAt)
+    ) {
+      return;
+    }
+
+    setSideQuests((current) =>
+      current.map((quest) =>
+        quest.id === editingSideId
+          ? {
+              ...quest,
+              title,
+              xp,
+              difficulty: editingSideDifficulty.trim() || 'Custom',
+              reward,
+              monsterName: editingSideMonsterMode === 'custom' ? editingSideMonsterName.trim() || undefined : undefined,
+              objectives,
+              done: false,
+              completedAt: undefined,
+              recurrence: editingSideRecurrence,
+              deadlineType: editingSideDeadlineType,
+              deadlineAt: normalizeDeadlineAt(editingSideDeadlineType, editingSideDeadlineAt),
+            }
+          : quest,
+      ),
+    );
+
+    cancelEditingSideQuest();
+  }
+
+  function startEditingMainQuest(quest: Quest) {
+    setEditingMainId(quest.id);
+    setEditingMainTitle(quest.title);
+    setEditingMainReward(quest.reward);
+    setEditingMainMonsterMode(quest.monsterName ? 'custom' : 'auto');
+    setEditingMainMonsterName(quest.monsterName ?? '');
+    setEditingMainCards(objectivesToDraftCards(quest.objectives));
+    setEditingMainRecurrence(quest.recurrence);
+    setEditingMainDeadlineType(quest.deadlineType);
+    setEditingMainDeadlineAt(quest.deadlineAt ?? '');
+  }
+
+  function cancelEditingMainQuest() {
+    setEditingMainId(null);
+  }
+
+  function saveMainQuestEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingMainId) {
+      return;
+    }
+
+    const title = editingMainTitle.trim();
+    const reward = editingMainReward.trim();
+    const objectives = normalizeDraftCards(editingMainCards, 8);
+
+    if (!title || !reward || objectives.length === 0 || !hasValidDeadline(editingMainDeadlineType, editingMainDeadlineAt)) {
+      return;
+    }
+
+    setMainQuests((current) =>
+      current.map((quest) =>
+        quest.id === editingMainId
+          ? {
+              ...quest,
+              title,
+              reward,
+              monsterName: editingMainMonsterMode === 'custom' ? editingMainMonsterName.trim() || undefined : undefined,
+              objectives,
+              done: false,
+              completedAt: undefined,
+              recurrence: editingMainRecurrence,
+              deadlineType: editingMainDeadlineType,
+              deadlineAt: normalizeDeadlineAt(editingMainDeadlineType, editingMainDeadlineAt),
+            }
+          : quest,
+      ),
+    );
+
+    cancelEditingMainQuest();
   }
 
   function setDailyQuestProgress(questId: string, progressCount: number) {
@@ -1591,9 +1810,50 @@ export default function App() {
                   +
                 </button>
               </div>
+              {editingDailyId === quest.id ? (
+                <form className="quest-form edit-form" onSubmit={saveDailyQuestEdit}>
+                  <h3>Edit Daily Deck</h3>
+                  <input onChange={(event) => setEditingDailyTitle(event.target.value)} placeholder="Routine title" value={editingDailyTitle} />
+                  <div className="form-grid">
+                    <input min="0" onChange={(event) => setEditingDailyXp(event.target.value)} placeholder="XP reward" type="number" value={editingDailyXp} />
+                    <input min="1" onChange={(event) => setEditingDailyTarget(event.target.value)} placeholder="Number of cards" type="number" value={editingDailyTarget} />
+                  </div>
+                  <input min="1" onChange={(event) => setEditingDailyPower(event.target.value)} placeholder="Damage per card" type="number" value={editingDailyPower} />
+                  <div className="form-grid">
+                    <select onChange={(event) => setEditingDailyRecurrence(event.target.value as Recurrence)} value={editingDailyRecurrence}>
+                      {recurrenceOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select onChange={(event) => setEditingDailyDeadlineType(event.target.value as DeadlineType)} value={editingDailyDeadlineType}>
+                      {deadlineOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {editingDailyDeadlineType === 'custom' ? (
+                    <input onChange={(event) => setEditingDailyDeadlineAt(event.target.value)} type="date" value={editingDailyDeadlineAt} />
+                  ) : null}
+                  <div className="edit-form-actions">
+                    <button className="ghost-button" onClick={cancelEditingDailyQuest} type="button">
+                      Cancel
+                    </button>
+                    <button className="primary-button compact-primary-button" type="submit">
+                      Save Changes
+                    </button>
+                  </div>
+                </form>
+              ) : null}
               <div className="card-actions">
                 <button className="ghost-button" onClick={() => setSelectedBoard({ kind: 'daily' })} type="button">
                   Open Battle
+                </button>
+                <button className="ghost-button" onClick={() => startEditingDailyQuest(quest)} type="button">
+                  Edit
                 </button>
                 <button className="ghost-button danger-button" onClick={() => deleteDailyQuest(quest.id)} type="button">
                   Delete
@@ -1645,9 +1905,95 @@ export default function App() {
                     </li>
                   ))}
                 </ul>
+                {editingSideId === quest.id ? (
+                  <form className="quest-form edit-form" onSubmit={saveSideQuestEdit}>
+                    <h3>Edit Side Quest</h3>
+                    <input onChange={(event) => setEditingSideTitle(event.target.value)} placeholder="Quest title" value={editingSideTitle} />
+                    <div className="form-grid">
+                      <input min="0" onChange={(event) => setEditingSideXp(event.target.value)} placeholder="XP reward" type="number" value={editingSideXp} />
+                      <input onChange={(event) => setEditingSideDifficulty(event.target.value)} placeholder="Difficulty" value={editingSideDifficulty} />
+                    </div>
+                    <input onChange={(event) => setEditingSideReward(event.target.value)} placeholder="Reward for completion" value={editingSideReward} />
+                    <div className="form-grid">
+                      <select onChange={(event) => setEditingSideRecurrence(event.target.value as Recurrence)} value={editingSideRecurrence}>
+                        {recurrenceOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <select onChange={(event) => setEditingSideDeadlineType(event.target.value as DeadlineType)} value={editingSideDeadlineType}>
+                        {deadlineOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {editingSideDeadlineType === 'custom' ? (
+                      <input onChange={(event) => setEditingSideDeadlineAt(event.target.value)} type="date" value={editingSideDeadlineAt} />
+                    ) : null}
+                    <div className="monster-mode-row" role="group" aria-label="Edit side monster naming">
+                      <button
+                        className={`ghost-button ${editingSideMonsterMode === 'auto' ? 'is-selected' : ''}`}
+                        onClick={() => setEditingSideMonsterMode('auto')}
+                        type="button"
+                      >
+                        Auto-generate Monster
+                      </button>
+                      <button
+                        className={`ghost-button ${editingSideMonsterMode === 'custom' ? 'is-selected' : ''}`}
+                        onClick={() => setEditingSideMonsterMode('custom')}
+                        type="button"
+                      >
+                        Name Monster Yourself
+                      </button>
+                    </div>
+                    {editingSideMonsterMode === 'custom' ? (
+                      <input onChange={(event) => setEditingSideMonsterName(event.target.value)} placeholder="Monster name" value={editingSideMonsterName} />
+                    ) : (
+                      <p className="form-helper">Monster preview: {autoGenerateMonsterName('side', editingSideTitle || 'side quest')}</p>
+                    )}
+                    <div className="card-builder" aria-label="Edit side quest cards">
+                      {editingSideCards.map((card, index) => (
+                        <div className="card-builder-row" key={card.id}>
+                          <input
+                            onChange={(event) => updateDraftCard(card.id, 'title', event.target.value, setEditingSideCards)}
+                            placeholder={`Card ${index + 1} title`}
+                            value={card.title}
+                          />
+                          <input
+                            min="1"
+                            onChange={(event) => updateDraftCard(card.id, 'cardPower', event.target.value, setEditingSideCards)}
+                            placeholder="Damage"
+                            type="number"
+                            value={card.cardPower}
+                          />
+                          <button className="ghost-button card-row-button" onClick={() => removeDraftCard(card.id, setEditingSideCards, '6')} type="button">
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                      <button className="ghost-button add-card-button" onClick={() => addDraftCard(setEditingSideCards, '6')} type="button">
+                        Add Card
+                      </button>
+                    </div>
+                    <div className="edit-form-actions">
+                      <button className="ghost-button" onClick={cancelEditingSideQuest} type="button">
+                        Cancel
+                      </button>
+                      <button className="primary-button compact-primary-button" type="submit">
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
+                ) : null}
                 <div className="card-actions">
                   <button className="ghost-button" onClick={() => setSelectedBoard({ kind: 'side', questId: quest.id })} type="button">
                     Open Battle
+                  </button>
+                  <button className="ghost-button" onClick={() => startEditingSideQuest(quest)} type="button">
+                    Edit
                   </button>
                   <button className="ghost-button danger-button" onClick={() => deleteQuest(quest.id, 'side', setSideQuests)} type="button">
                     Delete
@@ -1698,9 +2044,91 @@ export default function App() {
                     </li>
                   ))}
                 </ul>
+                {editingMainId === quest.id ? (
+                  <form className="quest-form edit-form" onSubmit={saveMainQuestEdit}>
+                    <h3>Edit Main Quest</h3>
+                    <input onChange={(event) => setEditingMainTitle(event.target.value)} placeholder="Main quest title" value={editingMainTitle} />
+                    <input onChange={(event) => setEditingMainReward(event.target.value)} placeholder="Reward for completion" value={editingMainReward} />
+                    <div className="form-grid">
+                      <select onChange={(event) => setEditingMainRecurrence(event.target.value as Recurrence)} value={editingMainRecurrence}>
+                        {recurrenceOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <select onChange={(event) => setEditingMainDeadlineType(event.target.value as DeadlineType)} value={editingMainDeadlineType}>
+                        {deadlineOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {editingMainDeadlineType === 'custom' ? (
+                      <input onChange={(event) => setEditingMainDeadlineAt(event.target.value)} type="date" value={editingMainDeadlineAt} />
+                    ) : null}
+                    <div className="monster-mode-row" role="group" aria-label="Edit main monster naming">
+                      <button
+                        className={`ghost-button ${editingMainMonsterMode === 'auto' ? 'is-selected' : ''}`}
+                        onClick={() => setEditingMainMonsterMode('auto')}
+                        type="button"
+                      >
+                        Auto-generate Monster
+                      </button>
+                      <button
+                        className={`ghost-button ${editingMainMonsterMode === 'custom' ? 'is-selected' : ''}`}
+                        onClick={() => setEditingMainMonsterMode('custom')}
+                        type="button"
+                      >
+                        Name Monster Yourself
+                      </button>
+                    </div>
+                    {editingMainMonsterMode === 'custom' ? (
+                      <input onChange={(event) => setEditingMainMonsterName(event.target.value)} placeholder="Monster name" value={editingMainMonsterName} />
+                    ) : (
+                      <p className="form-helper">Monster preview: {autoGenerateMonsterName('main', editingMainTitle || 'main quest')}</p>
+                    )}
+                    <div className="card-builder" aria-label="Edit main quest cards">
+                      {editingMainCards.map((card, index) => (
+                        <div className="card-builder-row" key={card.id}>
+                          <input
+                            onChange={(event) => updateDraftCard(card.id, 'title', event.target.value, setEditingMainCards)}
+                            placeholder={`Card ${index + 1} title`}
+                            value={card.title}
+                          />
+                          <input
+                            min="1"
+                            onChange={(event) => updateDraftCard(card.id, 'cardPower', event.target.value, setEditingMainCards)}
+                            placeholder="Damage"
+                            type="number"
+                            value={card.cardPower}
+                          />
+                          <button className="ghost-button card-row-button" onClick={() => removeDraftCard(card.id, setEditingMainCards, '10')} type="button">
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                      <button className="ghost-button add-card-button" onClick={() => addDraftCard(setEditingMainCards, '10')} type="button">
+                        Add Card
+                      </button>
+                    </div>
+                    <div className="edit-form-actions">
+                      <button className="ghost-button" onClick={cancelEditingMainQuest} type="button">
+                        Cancel
+                      </button>
+                      <button className="primary-button compact-primary-button" type="submit">
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
+                ) : null}
                 <div className="card-actions">
                   <button className="ghost-button" onClick={() => setSelectedBoard({ kind: 'main', questId: quest.id })} type="button">
                     Open Battle
+                  </button>
+                  <button className="ghost-button" onClick={() => startEditingMainQuest(quest)} type="button">
+                    Edit
                   </button>
                   <button className="ghost-button danger-button" onClick={() => deleteQuest(quest.id, 'main', setMainQuests)} type="button">
                     Delete
