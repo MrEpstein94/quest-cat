@@ -408,7 +408,6 @@ function BattleBoard({
           <article className="monster-boss-card" key={hitCount}>
             <div className="monster-boss-topline">
               <span className="battle-card-type">Boss</span>
-              <span className="battle-stat-chip">{fieldCards.length} hits landed</span>
             </div>
             <div className="monster-boss-art" aria-hidden="true">
               {monsterDefeated ? '💥' : '👹'}
@@ -422,7 +421,6 @@ function BattleBoard({
               <span style={{ width: `${healthPercent}%` }} />
             </div>
             <div className="battle-stats">
-              <span>{battleState.totalHp - battleState.currentHp} damage dealt</span>
               <span>{fieldCards.length} cards on field</span>
             </div>
           </div>
@@ -450,13 +448,11 @@ function BattleBoard({
                 >
                   <div className="battle-card-topline">
                     <span className="battle-card-type">field card</span>
-                    <span className="battle-stat-chip">{card.cardPower} dmg</span>
                   </div>
                   <div className="battle-card-art" aria-hidden="true">
                     ⚔️
                   </div>
                   <strong>{card.title}</strong>
-                  <small>{card.flavor}</small>
                   <span className="battle-card-action">Recall to hand</span>
                 </button>
               ))
@@ -501,10 +497,8 @@ function BattleBoard({
                     <div className="hand-card-copy">
                       <div className="battle-card-topline">
                         <span className="battle-card-type">{card.family} card</span>
-                        <span className="battle-stat-chip">{card.cardPower} dmg</span>
                       </div>
                       <strong>{card.title}</strong>
-                      <small>{card.flavor}</small>
                     </div>
                   </div>
                   <span className="battle-card-action">Play to field</span>
