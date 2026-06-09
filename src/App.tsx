@@ -830,6 +830,13 @@ export default function App() {
   const [editingMainRecurrence, setEditingMainRecurrence] = useState<Recurrence>('none');
   const [editingMainDeadlineType, setEditingMainDeadlineType] = useState<DeadlineType>('none');
   const [editingMainDeadlineAt, setEditingMainDeadlineAt] = useState('');
+  const [collapsedSections, setCollapsedSections] = useState({
+    daily: false,
+    side: false,
+    main: false,
+    history: false,
+    forge: false,
+  });
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -1538,6 +1545,13 @@ export default function App() {
     );
   }
 
+  function toggleSection(section: keyof typeof collapsedSections) {
+    setCollapsedSections((current) => ({
+      ...current,
+      [section]: !current[section],
+    }));
+  }
+
   if (selectedBoard && activeBattle) {
     return (
       <BattleBoard
@@ -1564,10 +1578,14 @@ export default function App() {
 
       <section className="section forge-section">
         <div className="section-heading">
-          <h2>Forge a Quest</h2>
+          <button className="section-toggle" onClick={() => toggleSection('forge')} type="button">
+            <h2>Forge a Quest</h2>
+            <span>{collapsedSections.forge ? 'Expand' : 'Collapse'}</span>
+          </button>
           <span>Build new quests, cards, monsters, and rewards</span>
         </div>
-
+        {!collapsedSections.forge ? (
+          <>
         <div className="builder-toggle-row">
           <button className={`ghost-button ${builderMode === 'daily' ? 'is-selected' : ''}`} onClick={() => setBuilderMode('daily')} type="button">
             Daily Deck
@@ -1770,15 +1788,21 @@ export default function App() {
             </button>
           </form>
         ) : null}
+          </>
+        ) : null}
       </section>
 
       <section className="section">
         <div className="section-heading">
-          <h2>Daily Routine Decks</h2>
+          <button className="section-toggle" onClick={() => toggleSection('daily')} type="button">
+            <h2>Daily Routine Decks</h2>
+            <span>{collapsedSections.daily ? 'Expand' : 'Collapse'}</span>
+          </button>
           <span>
             {completedCount} of {dailyQuests.length} decks cleared
           </span>
         </div>
+        {!collapsedSections.daily ? (
         <div className="card-stack">
           {dailyQuests.map((quest) => (
             <article className="game-card list-card deck-card" key={quest.id}>
@@ -1862,14 +1886,19 @@ export default function App() {
             </article>
           ))}
         </div>
+        ) : null}
 
       </section>
 
       <section className="section">
         <div className="section-heading">
-          <h2>Side Quest Decks</h2>
+          <button className="section-toggle" onClick={() => toggleSection('side')} type="button">
+            <h2>Side Quest Decks</h2>
+            <span>{collapsedSections.side ? 'Expand' : 'Collapse'}</span>
+          </button>
           <span>Worth {sideQuestXp} bonus XP</span>
         </div>
+        {!collapsedSections.side ? (
         <div className="card-stack">
           {sideQuests.map((quest) => {
             const completion = getQuestCompletion(quest);
@@ -2003,14 +2032,19 @@ export default function App() {
             );
           })}
         </div>
+        ) : null}
 
       </section>
 
       <section className="section">
         <div className="section-heading">
-          <h2>Main Quest Decks</h2>
+          <button className="section-toggle" onClick={() => toggleSection('main')} type="button">
+            <h2>Main Quest Decks</h2>
+            <span>{collapsedSections.main ? 'Expand' : 'Collapse'}</span>
+          </button>
           <span>Story battles</span>
         </div>
+        {!collapsedSections.main ? (
         <div className="card-stack">
           {mainQuests.map((quest) => {
             const completion = getQuestCompletion(quest);
@@ -2138,14 +2172,19 @@ export default function App() {
             );
           })}
         </div>
+        ) : null}
 
       </section>
 
       <section className="section">
         <div className="section-heading">
-          <h2>Completed History</h2>
+          <button className="section-toggle" onClick={() => toggleSection('history')} type="button">
+            <h2>Completed History</h2>
+            <span>{collapsedSections.history ? 'Expand' : 'Collapse'}</span>
+          </button>
           <span>{recentHistory.length} clears logged</span>
         </div>
+        {!collapsedSections.history ? (
         <div className="card-stack">
           {recentHistory.length === 0 ? (
             <article className="game-card list-card history-card">
@@ -2168,6 +2207,7 @@ export default function App() {
             ))
           )}
         </div>
+        ) : null}
       </section>
 
     </main>
