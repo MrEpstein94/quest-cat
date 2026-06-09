@@ -1297,6 +1297,7 @@ h1 {
   .hand-fan {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: row;
     align-items: stretch;
   }
 
@@ -1348,6 +1349,12 @@ h1 {
     width: 100%;
     max-width: 100%;
     min-height: 88px;
+    grid-column: span 1;
+    justify-self: stretch;
+  }
+
+  .hand-card:last-child:nth-child(odd) {
+    grid-column: 1 / 2;
   }
 
   .hand-card-inner {
