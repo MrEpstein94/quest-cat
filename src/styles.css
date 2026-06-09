@@ -308,6 +308,9 @@ h1 {
 }
 
 .list-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
   color: #f8fafc;
 }
 
@@ -317,6 +320,48 @@ h1 {
 .list-card .objective-list li {
   position: relative;
   z-index: 1;
+}
+
+.deck-card {
+  align-content: start;
+}
+
+.deck-card-body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.deck-card-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.deck-card-copy strong {
+  display: block;
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.15;
+}
+
+.deck-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  color: #d8e3eb;
+  line-height: 1.45;
+}
+
+.deck-card-meta span[aria-hidden='true'] {
+  color: rgba(216, 227, 235, 0.6);
+}
+
+.deck-card .reward-pill {
+  margin: 2px 0 0;
 }
 
 .quest-content,
@@ -335,6 +380,16 @@ h1 {
 .card-actions {
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.deck-card .card-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-content: stretch;
+}
+
+.deck-card .card-actions .ghost-button {
+  width: 100%;
 }
 
 .check-row {
@@ -468,13 +523,20 @@ h1 {
   gap: 10px;
   padding: 6px;
   border-radius: 999px;
-  background: rgba(30, 41, 59, 0.08);
+  background: rgba(7, 17, 24, 0.24);
+  width: fit-content;
+  max-width: 100%;
 }
 
 .mini-stepper span {
-  min-width: 20px;
+  min-width: 24px;
   text-align: center;
   font-weight: 800;
+}
+
+.mini-stepper .ghost-button {
+  min-width: 44px;
+  padding: 10px 0;
 }
 
 .quest-form {
@@ -1205,6 +1267,10 @@ h1 {
     width: 100%;
   }
 
+  .mini-stepper .ghost-button {
+    width: auto;
+  }
+
   .quest-content,
   .card-actions,
   .monster-copy,
@@ -1240,6 +1306,24 @@ h1 {
   .battle-card-topline {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .deck-card .battle-card-topline {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .deck-card-copy strong {
+    font-size: 1.06rem;
+  }
+
+  .deck-card-meta {
+    font-size: 0.82rem;
+  }
+
+  .deck-card .card-actions {
+    grid-template-columns: 1fr;
   }
 
   .monster-stage {
