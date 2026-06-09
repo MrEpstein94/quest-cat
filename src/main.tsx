@@ -11,6 +11,10 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+if ('caches' in window) {
+  void caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))));
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
