@@ -1562,7 +1562,7 @@ export default function App() {
         </p>
       </section>
 
-      <section className="section">
+      <section className="section forge-section">
         <div className="section-heading">
           <h2>Forge a Quest</h2>
           <span>Build new quests, cards, monsters, and rewards</span>

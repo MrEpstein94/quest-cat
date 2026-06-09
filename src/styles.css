@@ -41,10 +41,16 @@ select {
 .shell {
   max-width: 460px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
   padding:
     calc(env(safe-area-inset-top, 0px) + 20px)
     18px
     calc(env(safe-area-inset-bottom, 0px) + 28px);
+}
+
+.forge-section {
+  order: 999;
 }
 
 .hero-card,
