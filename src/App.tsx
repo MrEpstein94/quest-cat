@@ -10,6 +10,7 @@ type QuestHistoryEntry = {
   title: string;
   reward: string;
   completedAt: string;
+  outcome: 'win' | 'loss';
 };
 
 type DailyQuest = {
@@ -23,6 +24,7 @@ type DailyQuest = {
   deadlineType: DeadlineType;
   deadlineAt?: string;
   completedAt?: string;
+  cycleStartedAt?: string;
 };
 
 type Objective = {
@@ -55,6 +57,7 @@ type Quest = {
   deadlineType: DeadlineType;
   deadlineAt?: string;
   completedAt?: string;
+  cycleStartedAt?: string;
 };
 
 type BoardSelection =
@@ -391,6 +394,28 @@ function shouldResetRecurring(completedAt: string | undefined, recurrence: Recur
   return false;
 }
 
+function hasRecurringCycleAdvanced(cycleStartedAt: string | undefined, recurrence: Recurrence, now = new Date()) {
+  if (!cycleStartedAt || recurrence === 'none') {
+    return false;
+  }
+
+  const cycleStart = new Date(cycleStartedAt);
+
+  if (Number.isNaN(cycleStart.getTime())) {
+    return false;
+  }
+
+  if (recurrence === 'daily') {
+    return getStartOfDay(now).getTime() > getStartOfDay(cycleStart).getTime();
+  }
+
+  if (recurrence === 'weekly') {
+    return getStartOfWeek(now).getTime() > getStartOfWeek(cycleStart).getTime();
+  }
+
+  return false;
+}
+
 function getQuestCompletion(quest: Quest) {
   const objectiveCount = quest.objectives.length;
   const completedObjectives = quest.objectives.filter((objective) => objective.done).length;
@@ -514,6 +539,7 @@ function normalizeDailyQuest(
     deadlineType: quest.deadlineType ?? 'endOfDay',
     deadlineAt: normalizeDeadlineAt(quest.deadlineType ?? 'endOfDay', quest.deadlineAt),
     completedAt: quest.completedAt,
+    cycleStartedAt: quest.cycleStartedAt ?? new Date().toISOString(),
   };
 }
 
@@ -585,10 +611,11 @@ function normalizeQuest(quest: Partial<Quest>) {
     deadlineType: quest.deadlineType ?? 'none',
     deadlineAt: normalizeDeadlineAt(quest.deadlineType ?? 'none', quest.deadlineAt),
     completedAt: quest.completedAt,
+    cycleStartedAt: quest.cycleStartedAt ?? new Date().toISOString(),
   };
 }
 
-function normalizeHistoryEntry(entry: Partial<QuestHistoryEntry>) {
+function normalizeHistoryEntry(entry: Partial<QuestHistoryEntry>): QuestHistoryEntry {
   return {
     id: entry.id ?? createId('history'),
     family: (entry.family as QuestHistoryEntry['family']) ?? 'side',
@@ -596,6 +623,7 @@ function normalizeHistoryEntry(entry: Partial<QuestHistoryEntry>) {
     title: entry.title ?? 'Completed quest',
     reward: entry.reward ?? 'Reward claimed',
     completedAt: entry.completedAt ?? new Date().toISOString(),
+    outcome: entry.outcome === 'loss' ? 'loss' : 'win',
   };
 }
 
@@ -972,6 +1000,11 @@ export default function App() {
     history: false,
     forge: false,
   });
+  const [editingHistoryId, setEditingHistoryId] = useState<string | null>(null);
+  const [editingHistoryTitle, setEditingHistoryTitle] = useState('');
+  const [editingHistoryReward, setEditingHistoryReward] = useState('');
+  const [editingHistoryCompletedAt, setEditingHistoryCompletedAt] = useState('');
+  const [editingHistoryOutcome, setEditingHistoryOutcome] = useState<'win' | 'loss'>('win');
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -983,36 +1016,89 @@ export default function App() {
   useEffect(() => {
     function resetRecurringQuests() {
       const now = new Date();
+      const historyEntries: QuestHistoryEntry[] = [];
 
       setDailyQuests((current) =>
         current.map((quest) =>
-          shouldResetRecurring(quest.completedAt, quest.recurrence, now)
-            ? {
-                ...quest,
-                completedAt: undefined,
-                cards: quest.cards.map((card) => ({ ...card, done: false })),
-              }
-            : quest,
+          hasRecurringCycleAdvanced(quest.cycleStartedAt, quest.recurrence, now)
+            ? (() => {
+                if (!isDailyQuestComplete(quest)) {
+                  historyEntries.push({
+                    id: createId('history'),
+                    family: 'daily',
+                    questId: quest.id,
+                    title: quest.title,
+                    reward: `${quest.xp} XP`,
+                    completedAt: now.toISOString(),
+                    outcome: 'loss',
+                  });
+                }
+
+                return {
+                  ...quest,
+                  completedAt: undefined,
+                  cycleStartedAt: now.toISOString(),
+                  cards: quest.cards.map((card) => ({ ...card, done: false })),
+                };
+              })()
+            : shouldResetRecurring(quest.completedAt, quest.recurrence, now)
+              ? {
+                  ...quest,
+                  completedAt: undefined,
+                  cycleStartedAt: now.toISOString(),
+                  cards: quest.cards.map((card) => ({ ...card, done: false })),
+                }
+              : quest,
         ),
       );
 
-      const resetQuestCollection = (setter: Dispatch<SetStateAction<Quest[]>>) => {
+      const resetQuestCollection = (
+        setter: Dispatch<SetStateAction<Quest[]>>,
+        family: QuestHistoryEntry['family'],
+      ) => {
         setter((current) =>
           current.map((quest) =>
-            shouldResetRecurring(quest.completedAt, quest.recurrence, now)
-              ? {
-                  ...quest,
-                  done: false,
-                  completedAt: undefined,
-                  objectives: quest.objectives.map((objective) => ({ ...objective, done: false })),
-                }
-              : quest,
+            hasRecurringCycleAdvanced(quest.cycleStartedAt, quest.recurrence, now)
+              ? (() => {
+                  if (!isQuestComplete(quest)) {
+                    historyEntries.push({
+                      id: createId('history'),
+                      family,
+                      questId: quest.id,
+                      title: quest.title,
+                      reward: quest.reward,
+                      completedAt: now.toISOString(),
+                      outcome: 'loss',
+                    });
+                  }
+
+                  return {
+                    ...quest,
+                    done: false,
+                    completedAt: undefined,
+                    cycleStartedAt: now.toISOString(),
+                    objectives: quest.objectives.map((objective) => ({ ...objective, done: false })),
+                  };
+                })()
+              : shouldResetRecurring(quest.completedAt, quest.recurrence, now)
+                ? {
+                    ...quest,
+                    done: false,
+                    completedAt: undefined,
+                    cycleStartedAt: now.toISOString(),
+                    objectives: quest.objectives.map((objective) => ({ ...objective, done: false })),
+                  }
+                : quest,
           ),
         );
       };
 
-      resetQuestCollection(setSideQuests);
-      resetQuestCollection(setMainQuests);
+      resetQuestCollection(setSideQuests, 'side');
+      resetQuestCollection(setMainQuests, 'main');
+
+      if (historyEntries.length > 0) {
+        setCompletionHistory((current) => [...historyEntries, ...current]);
+      }
     }
 
     resetRecurringQuests();
@@ -1060,13 +1146,57 @@ export default function App() {
   function buildQuestHistoryEntry(
     family: QuestHistoryEntry['family'],
     quest: Pick<Quest, 'id' | 'title' | 'reward'>,
+    outcome: QuestHistoryEntry['outcome'] = 'win',
   ) {
     return {
       family,
       questId: quest.id,
       title: quest.title,
       reward: quest.reward,
+      outcome,
     } satisfies Omit<QuestHistoryEntry, 'id' | 'completedAt'>;
+  }
+
+  function startEditingHistoryEntry(entry: QuestHistoryEntry) {
+    setEditingHistoryId(entry.id);
+    setEditingHistoryTitle(entry.title);
+    setEditingHistoryReward(entry.reward);
+    setEditingHistoryCompletedAt(entry.completedAt.slice(0, 16));
+    setEditingHistoryOutcome(entry.outcome);
+  }
+
+  function cancelEditingHistoryEntry() {
+    setEditingHistoryId(null);
+  }
+
+  function saveHistoryEntryEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingHistoryId || !editingHistoryTitle.trim() || !editingHistoryReward.trim() || !editingHistoryCompletedAt) {
+      return;
+    }
+
+    const completedAt = new Date(editingHistoryCompletedAt);
+
+    if (Number.isNaN(completedAt.getTime())) {
+      return;
+    }
+
+    setCompletionHistory((current) =>
+      current.map((entry) =>
+        entry.id === editingHistoryId
+          ? {
+              ...entry,
+              title: editingHistoryTitle.trim(),
+              reward: editingHistoryReward.trim(),
+              completedAt: completedAt.toISOString(),
+              outcome: editingHistoryOutcome,
+            }
+          : entry,
+      ),
+    );
+
+    cancelEditingHistoryEntry();
   }
 
   function hasValidDeadline(deadlineType: DeadlineType, deadlineAt: string) {
@@ -1105,6 +1235,7 @@ export default function App() {
         recurrence: dailyRecurrence,
         deadlineType: dailyDeadlineType,
         deadlineAt: normalizeDeadlineAt(dailyDeadlineType, dailyDeadlineAt),
+        cycleStartedAt: new Date().toISOString(),
       },
     ]);
     setDailyTitle('');
@@ -1177,6 +1308,7 @@ export default function App() {
         recurrence: sideRecurrence,
         deadlineType: sideDeadlineType,
         deadlineAt: normalizeDeadlineAt(sideDeadlineType, sideDeadlineAt),
+        cycleStartedAt: new Date().toISOString(),
       },
     ]);
     setSideTitle('');
@@ -1226,6 +1358,7 @@ export default function App() {
         recurrence: mainRecurrence,
         deadlineType: mainDeadlineType,
         deadlineAt: normalizeDeadlineAt(mainDeadlineType, mainDeadlineAt),
+        cycleStartedAt: new Date().toISOString(),
       },
     ]);
     setMainTitle('');
@@ -1299,6 +1432,7 @@ export default function App() {
           deadlineType: editingDailyDeadlineType,
           deadlineAt: normalizeDeadlineAt(editingDailyDeadlineType, editingDailyDeadlineAt),
           completedAt: nextPlayedCount >= cards.length ? quest.completedAt ?? new Date().toISOString() : undefined,
+          cycleStartedAt: quest.cycleStartedAt ?? new Date().toISOString(),
         };
       }),
     );
@@ -1370,6 +1504,7 @@ export default function App() {
               recurrence: editingSideRecurrence,
               deadlineType: editingSideDeadlineType,
               deadlineAt: normalizeDeadlineAt(editingSideDeadlineType, editingSideDeadlineAt),
+              cycleStartedAt: quest.cycleStartedAt ?? new Date().toISOString(),
             }
           : quest,
       ),
@@ -1435,6 +1570,7 @@ export default function App() {
               recurrence: editingMainRecurrence,
               deadlineType: editingMainDeadlineType,
               deadlineAt: normalizeDeadlineAt(editingMainDeadlineType, editingMainDeadlineAt),
+              cycleStartedAt: quest.cycleStartedAt ?? new Date().toISOString(),
             }
           : quest,
       ),
@@ -1462,6 +1598,7 @@ export default function App() {
             questId: quest.id,
             title: quest.title,
             reward: `${quest.xp} XP`,
+            outcome: 'win',
           };
         }
 
@@ -1499,6 +1636,7 @@ export default function App() {
             questId: quest.id,
             title: quest.title,
             reward: `${quest.xp} XP`,
+            outcome: 'win',
           };
         }
 
@@ -1548,6 +1686,7 @@ export default function App() {
               questId: quest.id,
               title: quest.title,
               reward: `${quest.xp} XP`,
+              outcome: 'win',
             };
           }
 
@@ -2485,19 +2624,55 @@ export default function App() {
           {recentHistory.length === 0 ? (
             <article className="game-card list-card history-card">
               <strong>No completed quests yet</strong>
-              <small>When you clear quests, their completion date will be saved here.</small>
+              <small>When you clear or miss quests, the result and date will be saved here.</small>
             </article>
           ) : (
             recentHistory.map((entry) => (
               <article className="game-card list-card history-card" key={entry.id}>
                 <div className="battle-card-topline">
-                  <span className="battle-card-type">{entry.family} clear</span>
-                  <span className="battle-stat-chip">{new Date(entry.completedAt).toLocaleDateString()}</span>
+                  <span className="battle-card-type">{entry.family} {entry.outcome}</span>
+                  <span className={`battle-stat-chip ${entry.outcome === 'loss' ? 'is-loss-chip' : 'is-win-chip'}`}>
+                    {entry.outcome}
+                  </span>
                 </div>
                 <div className="deck-card-copy">
                   <strong>{entry.title}</strong>
                   <small>{new Date(entry.completedAt).toLocaleString()}</small>
                   <p className="reward-pill">Reward: {entry.reward}</p>
+                </div>
+                {editingHistoryId === entry.id ? (
+                  <form className="quest-form edit-form" onSubmit={saveHistoryEntryEdit}>
+                    <h3>Edit Finished Quest</h3>
+                    <input onChange={(event) => setEditingHistoryTitle(event.target.value)} placeholder="Quest title" value={editingHistoryTitle} />
+                    <input onChange={(event) => setEditingHistoryReward(event.target.value)} placeholder="Reward" value={editingHistoryReward} />
+                    <div className="form-grid">
+                      <input
+                        onChange={(event) => setEditingHistoryCompletedAt(event.target.value)}
+                        type="datetime-local"
+                        value={editingHistoryCompletedAt}
+                      />
+                      <select
+                        onChange={(event) => setEditingHistoryOutcome(event.target.value as 'win' | 'loss')}
+                        value={editingHistoryOutcome}
+                      >
+                        <option value="win">Win</option>
+                        <option value="loss">Loss</option>
+                      </select>
+                    </div>
+                    <div className="edit-form-actions">
+                      <button className="ghost-button" onClick={cancelEditingHistoryEntry} type="button">
+                        Cancel
+                      </button>
+                      <button className="primary-button compact-primary-button" type="submit">
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
+                ) : null}
+                <div className="card-actions">
+                  <button className="ghost-button" onClick={() => startEditingHistoryEntry(entry)} type="button">
+                    Edit Finished Quest
+                  </button>
                 </div>
               </article>
             ))
