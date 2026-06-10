@@ -28,6 +28,7 @@ type DailyQuest = {
 type Objective = {
   id: string;
   title: string;
+  symbol?: string;
   cardPower: number;
   done: boolean;
 };
@@ -35,6 +36,7 @@ type Objective = {
 type DraftCard = {
   id: string;
   title: string;
+  symbol: string;
   cardPower: string;
 };
 
@@ -71,6 +73,7 @@ type BattleCard = {
   id: string;
   originId: string;
   title: string;
+  symbol: string;
   cardPower: number;
   played: boolean;
   flavor: string;
@@ -119,11 +122,11 @@ const defaultDailyQuests: DailyQuest[] = [
     title: 'Drink water',
     xp: 10,
     cards: [
-      { id: 'daily-1-card-1', title: 'Morning glass', cardPower: 3, done: true },
-      { id: 'daily-1-card-2', title: 'Lunch refill', cardPower: 3, done: true },
-      { id: 'daily-1-card-3', title: 'Afternoon glass', cardPower: 3, done: false },
-      { id: 'daily-1-card-4', title: 'Dinner refill', cardPower: 3, done: false },
-      { id: 'daily-1-card-5', title: 'Night glass', cardPower: 3, done: false },
+      { id: 'daily-1-card-1', title: 'Morning glass', symbol: '💧', cardPower: 3, done: true },
+      { id: 'daily-1-card-2', title: 'Lunch refill', symbol: '🥤', cardPower: 3, done: true },
+      { id: 'daily-1-card-3', title: 'Afternoon glass', symbol: '💦', cardPower: 3, done: false },
+      { id: 'daily-1-card-4', title: 'Dinner refill', symbol: '🫗', cardPower: 3, done: false },
+      { id: 'daily-1-card-5', title: 'Night glass', symbol: '🌊', cardPower: 3, done: false },
     ],
     monsterArt: '🗡️',
     monsterHp: 15,
@@ -134,7 +137,7 @@ const defaultDailyQuests: DailyQuest[] = [
     id: 'daily-2',
     title: 'Shower',
     xp: 15,
-    cards: [{ id: 'daily-2-card-1', title: 'Take shower', cardPower: 8, done: false }],
+    cards: [{ id: 'daily-2-card-1', title: 'Take shower', symbol: '🚿', cardPower: 8, done: false }],
     monsterArt: '🗡️',
     monsterHp: 8,
     recurrence: 'daily',
@@ -145,8 +148,8 @@ const defaultDailyQuests: DailyQuest[] = [
     title: 'Brush teeth',
     xp: 12,
     cards: [
-      { id: 'daily-3-card-1', title: 'Brush in morning', cardPower: 4, done: true },
-      { id: 'daily-3-card-2', title: 'Brush at night', cardPower: 4, done: false },
+      { id: 'daily-3-card-1', title: 'Brush in morning', symbol: '🪥', cardPower: 4, done: true },
+      { id: 'daily-3-card-2', title: 'Brush at night', symbol: '✨', cardPower: 4, done: false },
     ],
     monsterArt: '🗡️',
     monsterHp: 8,
@@ -157,7 +160,7 @@ const defaultDailyQuests: DailyQuest[] = [
     id: 'daily-4',
     title: '30 minute workout',
     xp: 35,
-    cards: [{ id: 'daily-4-card-1', title: 'Workout session', cardPower: 12, done: false }],
+    cards: [{ id: 'daily-4-card-1', title: 'Workout session', symbol: '💪', cardPower: 12, done: false }],
     monsterArt: '🗡️',
     monsterHp: 12,
     recurrence: 'daily',
@@ -178,9 +181,9 @@ const defaultSideQuests: Quest[] = [
     recurrence: 'none',
     deadlineType: 'none',
     objectives: [
-      { id: 'side-1-1', title: 'Pick one person', cardPower: 4, done: false },
-      { id: 'side-1-2', title: 'Send the message', cardPower: 5, done: false },
-      { id: 'side-1-3', title: 'Archive the thread', cardPower: 6, done: false },
+      { id: 'side-1-1', title: 'Pick one person', symbol: '🎯', cardPower: 4, done: false },
+      { id: 'side-1-2', title: 'Send the message', symbol: '💬', cardPower: 5, done: false },
+      { id: 'side-1-3', title: 'Archive the thread', symbol: '📦', cardPower: 6, done: false },
     ],
   },
   {
@@ -195,9 +198,9 @@ const defaultSideQuests: Quest[] = [
     recurrence: 'none',
     deadlineType: 'none',
     objectives: [
-      { id: 'side-2-1', title: 'Choose one desk or counter', cardPower: 4, done: false },
-      { id: 'side-2-2', title: 'Throw away trash', cardPower: 5, done: false },
-      { id: 'side-2-3', title: 'Put items back', cardPower: 6, done: false },
+      { id: 'side-2-1', title: 'Choose one desk or counter', symbol: '📍', cardPower: 4, done: false },
+      { id: 'side-2-2', title: 'Throw away trash', symbol: '🗑️', cardPower: 5, done: false },
+      { id: 'side-2-3', title: 'Put items back', symbol: '📚', cardPower: 6, done: false },
     ],
   },
   {
@@ -212,9 +215,9 @@ const defaultSideQuests: Quest[] = [
     recurrence: 'none',
     deadlineType: 'none',
     objectives: [
-      { id: 'side-3-1', title: 'Set a 15-minute timer', cardPower: 6, done: false },
-      { id: 'side-3-2', title: 'Read without phone', cardPower: 7, done: false },
-      { id: 'side-3-3', title: 'Log one takeaway', cardPower: 8, done: false },
+      { id: 'side-3-1', title: 'Set a 15-minute timer', symbol: '⏱️', cardPower: 6, done: false },
+      { id: 'side-3-2', title: 'Read without phone', symbol: '📖', cardPower: 7, done: false },
+      { id: 'side-3-3', title: 'Log one takeaway', symbol: '📝', cardPower: 8, done: false },
     ],
   },
 ];
@@ -230,8 +233,8 @@ const defaultMainQuests: Quest[] = [
     recurrence: 'weekly',
     deadlineType: 'endOfWeek',
     objectives: [
-      { id: 'main-1-1', title: 'Finish 3 daily quests each day', cardPower: 8, done: false },
-      { id: 'main-1-2', title: 'Keep the streak alive tonight', cardPower: 10, done: false },
+      { id: 'main-1-1', title: 'Finish 3 daily quests each day', symbol: '🔥', cardPower: 8, done: false },
+      { id: 'main-1-2', title: 'Keep the streak alive tonight', symbol: '🌙', cardPower: 10, done: false },
     ],
   },
   {
@@ -244,9 +247,9 @@ const defaultMainQuests: Quest[] = [
     recurrence: 'none',
     deadlineType: 'none',
     objectives: [
-      { id: 'main-2-1', title: 'Finish quest list layout', cardPower: 8, done: false },
-      { id: 'main-2-2', title: 'Define reward system', cardPower: 9, done: false },
-      { id: 'main-2-3', title: 'Ship first installable build', cardPower: 11, done: false },
+      { id: 'main-2-1', title: 'Finish quest list layout', symbol: '🧩', cardPower: 8, done: false },
+      { id: 'main-2-2', title: 'Define reward system', symbol: '🎁', cardPower: 9, done: false },
+      { id: 'main-2-3', title: 'Ship first installable build', symbol: '🚀', cardPower: 11, done: false },
     ],
   },
 ];
@@ -494,6 +497,7 @@ function normalizeDailyQuest(
         return Array.from({ length: targetCount }, (_, index) => ({
           id: createId('daily-card'),
           title: targetCount === 1 ? quest.title ?? 'Daily card' : `${quest.title ?? 'Daily card'} ${index + 1}`,
+          symbol: '🗡️',
           cardPower,
           done: index < progressCount,
         }));
@@ -517,15 +521,17 @@ function normalizeObjective(objective: Partial<Objective>) {
   return {
     id: objective.id ?? createId('objective'),
     title: objective.title ?? 'New step',
+    symbol: objective.symbol?.trim() || '🗡️',
     cardPower: Math.max(1, Number(objective.cardPower ?? 4)),
     done: Boolean(objective.done),
   };
 }
 
-function createDraftCard(defaultPower = '4'): DraftCard {
+function createDraftCard(defaultPower = '4', defaultSymbol = '🗡️'): DraftCard {
   return {
     id: createId('draft-card'),
     title: '',
+    symbol: defaultSymbol,
     cardPower: defaultPower,
   };
 }
@@ -534,6 +540,7 @@ function objectivesToDraftCards(objectives: Objective[]) {
   return objectives.map((objective) => ({
     id: createId('draft-card'),
     title: objective.title,
+    symbol: objective.symbol || '🗡️',
     cardPower: String(objective.cardPower),
   }));
 }
@@ -542,6 +549,7 @@ function normalizeDraftCards(cards: DraftCard[], fallbackBasePower: number) {
   return cards
     .map((card, index) => ({
       title: card.title.trim(),
+      symbol: card.symbol.trim() || '🗡️',
       cardPower: Number(card.cardPower),
       fallbackPower: fallbackBasePower + index,
     }))
@@ -549,6 +557,7 @@ function normalizeDraftCards(cards: DraftCard[], fallbackBasePower: number) {
     .map((card) => ({
       id: createId('objective'),
       title: card.title,
+      symbol: card.symbol,
       cardPower:
         Number.isFinite(card.cardPower) && card.cardPower > 0 ? card.cardPower : card.fallbackPower,
       done: false,
@@ -646,6 +655,7 @@ function buildBattleState(
       id: card.id,
       originId: quest.id,
       title: card.title,
+      symbol: card.symbol || '🗡️',
       cardPower: card.cardPower,
       played: card.done,
       flavor: `${card.cardPower} damage splash`,
@@ -681,6 +691,7 @@ function buildBattleState(
     id: objective.id,
     originId: objective.id,
     title: objective.title,
+    symbol: objective.symbol || '🗡️',
     cardPower: objective.cardPower,
     played: objective.done,
     flavor: selection.kind === 'side' ? 'Tactical side-quest move' : 'Storyline power move',
@@ -816,7 +827,7 @@ function BattleBoard({
                     <span className="battle-card-type">field card</span>
                   </div>
                   <div className="battle-card-art" aria-hidden="true">
-                    ⚔️
+                    {card.symbol || '🗡️'}
                   </div>
                   <strong>{card.title}</strong>
                   <span className="battle-card-action">Recall to hand</span>
@@ -858,7 +869,7 @@ function BattleBoard({
                 >
                   <div className="hand-card-inner">
                     <div className="battle-card-art hand-card-art" aria-hidden="true">
-                      🗡️
+                      {card.symbol || '🗡️'}
                     </div>
                     <div className="hand-card-copy">
                       <div className="battle-card-topline">
@@ -1108,7 +1119,7 @@ export default function App() {
 
   function updateDraftCard(
     cardId: string,
-    field: 'title' | 'cardPower',
+    field: 'title' | 'symbol' | 'cardPower',
     value: string,
     setter: Dispatch<SetStateAction<DraftCard[]>>,
   ) {
@@ -1834,6 +1845,11 @@ export default function App() {
                     value={card.title}
                   />
                   <input
+                    onChange={(event) => updateDraftCard(card.id, 'symbol', event.target.value, setDailyCards)}
+                    placeholder="Symbol"
+                    value={card.symbol}
+                  />
+                  <input
                     min="1"
                     onChange={(event) => updateDraftCard(card.id, 'cardPower', event.target.value, setDailyCards)}
                     placeholder="Damage"
@@ -1937,6 +1953,11 @@ export default function App() {
                     value={card.title}
                   />
                   <input
+                    onChange={(event) => updateDraftCard(card.id, 'symbol', event.target.value, setSideCards)}
+                    placeholder="Symbol"
+                    value={card.symbol}
+                  />
+                  <input
                     min="1"
                     onChange={(event) => updateDraftCard(card.id, 'cardPower', event.target.value, setSideCards)}
                     placeholder="Damage"
@@ -2015,6 +2036,11 @@ export default function App() {
                     onChange={(event) => updateDraftCard(card.id, 'title', event.target.value, setMainCards)}
                     placeholder={`Card ${index + 1} title`}
                     value={card.title}
+                  />
+                  <input
+                    onChange={(event) => updateDraftCard(card.id, 'symbol', event.target.value, setMainCards)}
+                    placeholder="Symbol"
+                    value={card.symbol}
                   />
                   <input
                     min="1"
@@ -2099,6 +2125,11 @@ export default function App() {
                           onChange={(event) => updateDraftCard(card.id, 'title', event.target.value, setEditingDailyCards)}
                           placeholder={`Card ${index + 1} title`}
                           value={card.title}
+                        />
+                        <input
+                          onChange={(event) => updateDraftCard(card.id, 'symbol', event.target.value, setEditingDailyCards)}
+                          placeholder="Symbol"
+                          value={card.symbol}
                         />
                         <input
                           min="1"
@@ -2256,6 +2287,11 @@ export default function App() {
                             value={card.title}
                           />
                           <input
+                            onChange={(event) => updateDraftCard(card.id, 'symbol', event.target.value, setEditingSideCards)}
+                            placeholder="Symbol"
+                            value={card.symbol}
+                          />
+                          <input
                             min="1"
                             onChange={(event) => updateDraftCard(card.id, 'cardPower', event.target.value, setEditingSideCards)}
                             placeholder="Damage"
@@ -2385,6 +2421,11 @@ export default function App() {
                             onChange={(event) => updateDraftCard(card.id, 'title', event.target.value, setEditingMainCards)}
                             placeholder={`Card ${index + 1} title`}
                             value={card.title}
+                          />
+                          <input
+                            onChange={(event) => updateDraftCard(card.id, 'symbol', event.target.value, setEditingMainCards)}
+                            placeholder="Symbol"
+                            value={card.symbol}
                           />
                           <input
                             min="1"
