@@ -2073,19 +2073,6 @@ export default function App() {
                   +
                 </button>
               </div>
-              <ul className="objective-list" aria-label={`${quest.title} cards`}>
-                {quest.cards.map((card) => (
-                  <li key={card.id}>
-                    <label className="objective-check">
-                      <input checked={card.done} onChange={() => toggleDailyCard(quest.id, card.id)} type="checkbox" />
-                      <span>
-                        {card.title}
-                        <small className="objective-power">{card.cardPower} dmg</small>
-                      </span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
               {editingDailyId === quest.id ? (
                 <form className="quest-form edit-form" onSubmit={saveDailyQuestEdit}>
                   <h3>Edit Daily Deck</h3>
@@ -2197,19 +2184,6 @@ export default function App() {
                     <p className="reward-pill">Reward: {quest.reward}</p>
                   </div>
                 </div>
-                <ul className="objective-list" aria-label={`${quest.title} objectives`}>
-                  {quest.objectives.map((objective) => (
-                    <li key={objective.id}>
-                      <label className="objective-check">
-                        <input checked={objective.done} onChange={() => toggleObjective(quest.id, objective.id, 'side', setSideQuests)} type="checkbox" />
-                        <span>
-                          {objective.title}
-                          <small className="objective-power">{objective.cardPower} dmg</small>
-                        </span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
                 {editingSideId === quest.id ? (
                   <form className="quest-form edit-form" onSubmit={saveSideQuestEdit}>
                     <h3>Edit Side Quest</h3>
@@ -2345,19 +2319,6 @@ export default function App() {
                     <p className="reward-pill">Reward: {quest.reward}</p>
                   </div>
                 </div>
-                <ul className="objective-list" aria-label={`${quest.title} objectives`}>
-                  {quest.objectives.map((objective) => (
-                    <li key={objective.id}>
-                      <label className="objective-check">
-                        <input checked={objective.done} onChange={() => toggleObjective(quest.id, objective.id, 'main', setMainQuests)} type="checkbox" />
-                        <span>
-                          {objective.title}
-                          <small className="objective-power">{objective.cardPower} dmg</small>
-                        </span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
                 {editingMainId === quest.id ? (
                   <form className="quest-form edit-form" onSubmit={saveMainQuestEdit}>
                     <h3>Edit Main Quest</h3>
