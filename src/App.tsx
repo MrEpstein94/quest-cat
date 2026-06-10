@@ -94,7 +94,7 @@ type BattleState = {
   cards: BattleCard[];
 };
 
-const STORAGE_KEY = 'quest-cat-state-v7';
+const STORAGE_KEY = 'quest-cat-state-v8';
 
 const rankTitles = [
   'Tiny Paws',
@@ -590,6 +590,20 @@ function normalizeDraftCards(cards: DraftCard[], fallbackBasePower: number) {
     }));
 }
 
+function migrateLegacyCycleStartedAt<T extends DailyQuest | Quest>(
+  quest: T,
+  sourceStorageKey: string | null,
+): T {
+  if (sourceStorageKey !== 'quest-cat-state-v7' || quest.recurrence === 'none') {
+    return quest;
+  }
+
+  return {
+    ...quest,
+    cycleStartedAt: quest.completedAt ?? new Date(0).toISOString(),
+  };
+}
+
 function normalizeQuest(quest: Partial<Quest>) {
   const objectives = Array.isArray(quest.objectives)
     ? quest.objectives.map(normalizeObjective)
@@ -632,13 +646,17 @@ function loadInitialState() {
     return buildInitialState();
   }
 
-  const savedState =
-    window.localStorage.getItem(STORAGE_KEY) ??
-    window.localStorage.getItem('quest-cat-state-v6') ??
-    window.localStorage.getItem('quest-cat-state-v5') ??
-    window.localStorage.getItem('quest-cat-state-v3') ??
-    window.localStorage.getItem('quest-cat-state-v2') ??
-    window.localStorage.getItem('quest-cat-state-v1');
+  const storageKeys = [
+    STORAGE_KEY,
+    'quest-cat-state-v7',
+    'quest-cat-state-v6',
+    'quest-cat-state-v5',
+    'quest-cat-state-v3',
+    'quest-cat-state-v2',
+    'quest-cat-state-v1',
+  ];
+  const sourceStorageKey = storageKeys.find((key) => window.localStorage.getItem(key) !== null) ?? null;
+  const savedState = sourceStorageKey ? window.localStorage.getItem(sourceStorageKey) : null;
 
   if (!savedState) {
     return buildInitialState();
@@ -649,13 +667,19 @@ function loadInitialState() {
 
     return {
       dailyQuests: Array.isArray(parsedState.dailyQuests)
-        ? parsedState.dailyQuests.map((quest) => normalizeDailyQuest(quest))
+        ? parsedState.dailyQuests
+            .map((quest) => normalizeDailyQuest(quest))
+            .map((quest) => migrateLegacyCycleStartedAt(quest, sourceStorageKey))
         : defaultDailyQuests,
       sideQuests: Array.isArray(parsedState.sideQuests)
-        ? parsedState.sideQuests.map((quest) => normalizeQuest(quest))
+        ? parsedState.sideQuests
+            .map((quest) => normalizeQuest(quest))
+            .map((quest) => migrateLegacyCycleStartedAt(quest, sourceStorageKey))
         : defaultSideQuests,
       mainQuests: Array.isArray(parsedState.mainQuests)
-        ? parsedState.mainQuests.map((quest) => normalizeQuest(quest))
+        ? parsedState.mainQuests
+            .map((quest) => normalizeQuest(quest))
+            .map((quest) => migrateLegacyCycleStartedAt(quest, sourceStorageKey))
         : defaultMainQuests,
       completionHistory: Array.isArray(parsedState.completionHistory)
         ? parsedState.completionHistory.map((entry) => normalizeHistoryEntry(entry))
