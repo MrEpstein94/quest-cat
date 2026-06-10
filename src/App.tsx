@@ -16,9 +16,7 @@ type DailyQuest = {
   id: string;
   title: string;
   xp: number;
-  targetCount: number;
-  progressCount: number;
-  cardPower: number;
+  cards: Objective[];
   recurrence: Recurrence;
   deadlineType: DeadlineType;
   deadlineAt?: string;
@@ -85,7 +83,7 @@ type BattleState = {
   cards: BattleCard[];
 };
 
-const STORAGE_KEY = 'quest-cat-state-v6';
+const STORAGE_KEY = 'quest-cat-state-v7';
 
 const rankTitles = [
   'Tiny Paws',
@@ -111,10 +109,47 @@ const deadlineOptions: Array<{ value: DeadlineType; label: string }> = [
 ];
 
 const defaultDailyQuests: DailyQuest[] = [
-  { id: 'daily-1', title: 'Drink water', xp: 10, targetCount: 5, progressCount: 2, cardPower: 3, recurrence: 'daily', deadlineType: 'endOfDay' },
-  { id: 'daily-2', title: 'Shower', xp: 15, targetCount: 1, progressCount: 0, cardPower: 8, recurrence: 'daily', deadlineType: 'endOfDay' },
-  { id: 'daily-3', title: 'Brush teeth', xp: 12, targetCount: 2, progressCount: 1, cardPower: 4, recurrence: 'daily', deadlineType: 'endOfDay' },
-  { id: 'daily-4', title: '30 minute workout', xp: 35, targetCount: 1, progressCount: 0, cardPower: 12, recurrence: 'daily', deadlineType: 'endOfDay' },
+  {
+    id: 'daily-1',
+    title: 'Drink water',
+    xp: 10,
+    cards: [
+      { id: 'daily-1-card-1', title: 'Morning glass', cardPower: 3, done: true },
+      { id: 'daily-1-card-2', title: 'Lunch refill', cardPower: 3, done: true },
+      { id: 'daily-1-card-3', title: 'Afternoon glass', cardPower: 3, done: false },
+      { id: 'daily-1-card-4', title: 'Dinner refill', cardPower: 3, done: false },
+      { id: 'daily-1-card-5', title: 'Night glass', cardPower: 3, done: false },
+    ],
+    recurrence: 'daily',
+    deadlineType: 'endOfDay',
+  },
+  {
+    id: 'daily-2',
+    title: 'Shower',
+    xp: 15,
+    cards: [{ id: 'daily-2-card-1', title: 'Take shower', cardPower: 8, done: false }],
+    recurrence: 'daily',
+    deadlineType: 'endOfDay',
+  },
+  {
+    id: 'daily-3',
+    title: 'Brush teeth',
+    xp: 12,
+    cards: [
+      { id: 'daily-3-card-1', title: 'Brush in morning', cardPower: 4, done: true },
+      { id: 'daily-3-card-2', title: 'Brush at night', cardPower: 4, done: false },
+    ],
+    recurrence: 'daily',
+    deadlineType: 'endOfDay',
+  },
+  {
+    id: 'daily-4',
+    title: '30 minute workout',
+    xp: 35,
+    cards: [{ id: 'daily-4-card-1', title: 'Workout session', cardPower: 12, done: false }],
+    recurrence: 'daily',
+    deadlineType: 'endOfDay',
+  },
 ];
 
 const defaultSideQuests: Quest[] = [
@@ -202,11 +237,16 @@ function clampCount(value: number, min: number, max: number) {
 }
 
 function isDailyQuestComplete(quest: DailyQuest) {
-  return quest.progressCount >= quest.targetCount;
+  return quest.cards.length > 0 && quest.cards.every((card) => card.done);
 }
 
 function getDailyProgressLabel(quest: DailyQuest) {
-  return `${quest.progressCount} / ${quest.targetCount} cards played`;
+  const playedCount = quest.cards.filter((card) => card.done).length;
+  return `${playedCount} / ${quest.cards.length} cards played`;
+}
+
+function getDailyQuestPlayedCount(quest: DailyQuest) {
+  return quest.cards.filter((card) => card.done).length;
 }
 
 function getStartOfDay(date: Date) {
@@ -396,19 +436,37 @@ function buildInitialState(): AppState {
 }
 
 function normalizeDailyQuest(
-  quest: Partial<DailyQuest> & { id?: string; title?: string; xp?: number; done?: boolean },
+  quest: Partial<DailyQuest> & {
+    id?: string;
+    title?: string;
+    xp?: number;
+    done?: boolean;
+    targetCount?: number;
+    progressCount?: number;
+    cardPower?: number;
+  },
 ) {
-  const targetCount = Math.max(1, Number(quest.targetCount ?? 1));
-  const fallbackProgress = quest.done ? targetCount : 0;
-  const progressCount = clampCount(Number(quest.progressCount ?? fallbackProgress), 0, targetCount);
+  const cards = Array.isArray(quest.cards)
+    ? quest.cards.map(normalizeObjective)
+    : (() => {
+        const targetCount = Math.max(1, Number(quest.targetCount ?? 1));
+        const fallbackProgress = quest.done ? targetCount : 0;
+        const progressCount = clampCount(Number(quest.progressCount ?? fallbackProgress), 0, targetCount);
+        const cardPower = Math.max(1, Number(quest.cardPower ?? 3));
+
+        return Array.from({ length: targetCount }, (_, index) => ({
+          id: createId('daily-card'),
+          title: targetCount === 1 ? quest.title ?? 'Daily card' : `${quest.title ?? 'Daily card'} ${index + 1}`,
+          cardPower,
+          done: index < progressCount,
+        }));
+      })();
 
   return {
     id: quest.id ?? createId('daily'),
     title: quest.title ?? 'New daily routine',
     xp: Number(quest.xp ?? 10),
-    targetCount,
-    progressCount,
-    cardPower: Math.max(1, Number(quest.cardPower ?? 3)),
+    cards,
     recurrence: quest.recurrence ?? 'daily',
     deadlineType: quest.deadlineType ?? 'endOfDay',
     deadlineAt: normalizeDeadlineAt(quest.deadlineType ?? 'endOfDay', quest.deadlineAt),
@@ -498,6 +556,7 @@ function loadInitialState() {
 
   const savedState =
     window.localStorage.getItem(STORAGE_KEY) ??
+    window.localStorage.getItem('quest-cat-state-v6') ??
     window.localStorage.getItem('quest-cat-state-v5') ??
     window.localStorage.getItem('quest-cat-state-v3') ??
     window.localStorage.getItem('quest-cat-state-v2') ??
@@ -537,13 +596,13 @@ function buildBattleState(
 ): BattleState | null {
   if (selection.kind === 'daily') {
     const cards = dailyQuests.flatMap<BattleCard>((quest) =>
-      Array.from({ length: quest.targetCount }, (_, index) => ({
-        id: `${quest.id}-card-${index + 1}`,
+      quest.cards.map((card) => ({
+        id: card.id,
         originId: quest.id,
-        title: quest.title,
-        cardPower: quest.cardPower,
-        played: index < quest.progressCount,
-        flavor: `${quest.cardPower} damage splash`,
+        title: card.title,
+        cardPower: card.cardPower,
+        played: card.done,
+        flavor: `${card.cardPower} damage splash`,
         family: 'daily',
       })),
     );
@@ -777,16 +836,14 @@ export default function App() {
 
   const [dailyTitle, setDailyTitle] = useState('');
   const [dailyXp, setDailyXp] = useState('10');
-  const [dailyTarget, setDailyTarget] = useState('1');
-  const [dailyPower, setDailyPower] = useState('3');
+  const [dailyCards, setDailyCards] = useState<DraftCard[]>([createDraftCard('3')]);
   const [dailyRecurrence, setDailyRecurrence] = useState<Recurrence>('daily');
   const [dailyDeadlineType, setDailyDeadlineType] = useState<DeadlineType>('endOfDay');
   const [dailyDeadlineAt, setDailyDeadlineAt] = useState('');
   const [editingDailyId, setEditingDailyId] = useState<string | null>(null);
   const [editingDailyTitle, setEditingDailyTitle] = useState('');
   const [editingDailyXp, setEditingDailyXp] = useState('10');
-  const [editingDailyTarget, setEditingDailyTarget] = useState('1');
-  const [editingDailyPower, setEditingDailyPower] = useState('3');
+  const [editingDailyCards, setEditingDailyCards] = useState<DraftCard[]>([createDraftCard('3')]);
   const [editingDailyRecurrence, setEditingDailyRecurrence] = useState<Recurrence>('daily');
   const [editingDailyDeadlineType, setEditingDailyDeadlineType] = useState<DeadlineType>('endOfDay');
   const [editingDailyDeadlineAt, setEditingDailyDeadlineAt] = useState('');
@@ -852,7 +909,11 @@ export default function App() {
       setDailyQuests((current) =>
         current.map((quest) =>
           shouldResetRecurring(quest.completedAt, quest.recurrence, now)
-            ? { ...quest, progressCount: 0, completedAt: undefined }
+            ? {
+                ...quest,
+                completedAt: undefined,
+                cards: quest.cards.map((card) => ({ ...card, done: false })),
+              }
             : quest,
         ),
       );
@@ -939,17 +1000,13 @@ export default function App() {
 
     const title = dailyTitle.trim();
     const xp = Number(dailyXp);
-    const targetCount = Number(dailyTarget);
-    const cardPower = Number(dailyPower);
+    const cards = normalizeDraftCards(dailyCards, 3);
 
     if (
       !title ||
       Number.isNaN(xp) ||
       xp < 0 ||
-      Number.isNaN(targetCount) ||
-      targetCount < 1 ||
-      Number.isNaN(cardPower) ||
-      cardPower < 1 ||
+      cards.length === 0 ||
       !hasValidDeadline(dailyDeadlineType, dailyDeadlineAt)
     ) {
       return;
@@ -961,9 +1018,7 @@ export default function App() {
         id: createId('daily'),
         title,
         xp,
-        targetCount,
-        progressCount: 0,
-        cardPower,
+        cards,
         recurrence: dailyRecurrence,
         deadlineType: dailyDeadlineType,
         deadlineAt: normalizeDeadlineAt(dailyDeadlineType, dailyDeadlineAt),
@@ -971,8 +1026,7 @@ export default function App() {
     ]);
     setDailyTitle('');
     setDailyXp('10');
-    setDailyTarget('1');
-    setDailyPower('3');
+    setDailyCards([createDraftCard('3')]);
     setDailyRecurrence('daily');
     setDailyDeadlineType('endOfDay');
     setDailyDeadlineAt('');
@@ -1086,8 +1140,7 @@ export default function App() {
     setEditingDailyId(quest.id);
     setEditingDailyTitle(quest.title);
     setEditingDailyXp(String(quest.xp));
-    setEditingDailyTarget(String(quest.targetCount));
-    setEditingDailyPower(String(quest.cardPower));
+    setEditingDailyCards(objectivesToDraftCards(quest.cards));
     setEditingDailyRecurrence(quest.recurrence);
     setEditingDailyDeadlineType(quest.deadlineType);
     setEditingDailyDeadlineAt(quest.deadlineAt ?? '');
@@ -1106,17 +1159,13 @@ export default function App() {
 
     const title = editingDailyTitle.trim();
     const xp = Number(editingDailyXp);
-    const targetCount = Number(editingDailyTarget);
-    const cardPower = Number(editingDailyPower);
+    const cards = normalizeDraftCards(editingDailyCards, 3);
 
     if (
       !title ||
       Number.isNaN(xp) ||
       xp < 0 ||
-      Number.isNaN(targetCount) ||
-      targetCount < 1 ||
-      Number.isNaN(cardPower) ||
-      cardPower < 1 ||
+      cards.length === 0 ||
       !hasValidDeadline(editingDailyDeadlineType, editingDailyDeadlineAt)
     ) {
       return;
@@ -1128,18 +1177,17 @@ export default function App() {
           return quest;
         }
 
-        const nextProgress = clampCount(quest.progressCount, 0, targetCount);
+        const priorPlayedCount = getDailyQuestPlayedCount(quest);
+        const nextPlayedCount = Math.min(priorPlayedCount, cards.length);
         return {
           ...quest,
           title,
           xp,
-          targetCount,
-          progressCount: nextProgress,
-          cardPower,
+          cards: cards.map((card, index) => ({ ...card, done: index < nextPlayedCount })),
           recurrence: editingDailyRecurrence,
           deadlineType: editingDailyDeadlineType,
           deadlineAt: normalizeDeadlineAt(editingDailyDeadlineType, editingDailyDeadlineAt),
-          completedAt: nextProgress >= targetCount ? quest.completedAt ?? new Date().toISOString() : undefined,
+          completedAt: nextPlayedCount >= cards.length ? quest.completedAt ?? new Date().toISOString() : undefined,
         };
       }),
     );
@@ -1275,8 +1323,8 @@ export default function App() {
           return quest;
         }
 
-        const nextProgress = clampCount(progressCount, 0, quest.targetCount);
-        const nextDone = nextProgress >= quest.targetCount;
+        const nextProgress = clampCount(progressCount, 0, quest.cards.length);
+        const nextDone = nextProgress >= quest.cards.length;
 
         if (!isDailyQuestComplete(quest) && nextDone) {
           historyEntry = {
@@ -1289,7 +1337,44 @@ export default function App() {
 
         return {
           ...quest,
-          progressCount: nextProgress,
+          cards: quest.cards.map((card, index) => ({ ...card, done: index < nextProgress })),
+          completedAt: nextDone ? quest.completedAt ?? completedAt : undefined,
+        };
+      }),
+    );
+
+    if (historyEntry) {
+      logQuestCompletion(historyEntry, completedAt);
+    }
+  }
+
+  function toggleDailyCard(questId: string, cardId: string) {
+    const completedAt = new Date().toISOString();
+    let historyEntry: Omit<QuestHistoryEntry, 'id' | 'completedAt'> | null = null;
+
+    setDailyQuests((current) =>
+      current.map((quest) => {
+        if (quest.id !== questId) {
+          return quest;
+        }
+
+        const cards = quest.cards.map((card) =>
+          card.id === cardId ? { ...card, done: !card.done } : card,
+        );
+        const nextDone = cards.length > 0 && cards.every((card) => card.done);
+
+        if (!isDailyQuestComplete(quest) && nextDone) {
+          historyEntry = {
+            family: 'daily',
+            questId: quest.id,
+            title: quest.title,
+            reward: `${quest.xp} XP`,
+          };
+        }
+
+        return {
+          ...quest,
+          cards,
           completedAt: nextDone ? quest.completedAt ?? completedAt : undefined,
         };
       }),
@@ -1318,13 +1403,16 @@ export default function App() {
 
       setDailyQuests((current) =>
         current.map((quest) => {
-          if (!cardId.startsWith(`${quest.id}-card-`)) {
+          if (!quest.cards.some((card) => card.id === cardId)) {
             return quest;
           }
 
-          const nextProgress = clampCount(quest.progressCount + 1, 0, quest.targetCount);
+          const cards = quest.cards.map((card) =>
+            card.id === cardId ? { ...card, done: true } : card,
+          );
+          const nextDone = cards.every((card) => card.done);
 
-          if (!isDailyQuestComplete(quest) && nextProgress >= quest.targetCount) {
+          if (!isDailyQuestComplete(quest) && nextDone) {
             historyEntry = {
               family: 'daily',
               questId: quest.id,
@@ -1335,8 +1423,8 @@ export default function App() {
 
           return {
             ...quest,
-            progressCount: nextProgress,
-            completedAt: nextProgress >= quest.targetCount ? quest.completedAt ?? completedAt : undefined,
+            cards,
+            completedAt: nextDone ? quest.completedAt ?? completedAt : undefined,
           };
         }),
       );
@@ -1393,10 +1481,12 @@ export default function App() {
     if (selectedBoard.kind === 'daily') {
       setDailyQuests((current) =>
         current.map((quest) =>
-          cardId.startsWith(`${quest.id}-card-`)
+          quest.cards.some((card) => card.id === cardId)
             ? {
                 ...quest,
-                progressCount: clampCount(quest.progressCount - 1, 0, quest.targetCount),
+                cards: quest.cards.map((card) =>
+                  card.id === cardId ? { ...card, done: false } : card,
+                ),
                 completedAt: undefined,
               }
             : quest,
@@ -1436,7 +1526,11 @@ export default function App() {
 
     if (selectedBoard.kind === 'daily') {
       setDailyQuests((current) =>
-        current.map((quest) => ({ ...quest, progressCount: 0, completedAt: undefined })),
+        current.map((quest) => ({
+          ...quest,
+          completedAt: undefined,
+          cards: quest.cards.map((card) => ({ ...card, done: false })),
+        })),
       );
       return;
     }
@@ -1601,13 +1695,33 @@ export default function App() {
         {builderMode === 'daily' ? (
           <form className="quest-form" onSubmit={addDailyQuest}>
             <h3>Add Daily Card Deck</h3>
-            <p className="form-note">Create a repeatable routine deck with however many cards you want to play each day.</p>
+            <p className="form-note">Create a repeatable routine deck with named cards you can add and edit.</p>
             <input onChange={(event) => setDailyTitle(event.target.value)} placeholder="Routine title" value={dailyTitle} />
-            <div className="form-grid">
-              <input min="0" onChange={(event) => setDailyXp(event.target.value)} placeholder="XP reward" type="number" value={dailyXp} />
-              <input min="1" onChange={(event) => setDailyTarget(event.target.value)} placeholder="Number of cards" type="number" value={dailyTarget} />
+            <input min="0" onChange={(event) => setDailyXp(event.target.value)} placeholder="XP reward" type="number" value={dailyXp} />
+            <div className="card-builder" aria-label="Daily quest cards">
+              {dailyCards.map((card, index) => (
+                <div className="card-builder-row" key={card.id}>
+                  <input
+                    onChange={(event) => updateDraftCard(card.id, 'title', event.target.value, setDailyCards)}
+                    placeholder={`Card ${index + 1} title`}
+                    value={card.title}
+                  />
+                  <input
+                    min="1"
+                    onChange={(event) => updateDraftCard(card.id, 'cardPower', event.target.value, setDailyCards)}
+                    placeholder="Damage"
+                    type="number"
+                    value={card.cardPower}
+                  />
+                  <button className="ghost-button card-row-button" onClick={() => removeDraftCard(card.id, setDailyCards, '3')} type="button">
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button className="ghost-button add-card-button" onClick={() => addDraftCard(setDailyCards, '3')} type="button">
+                Add Card
+              </button>
             </div>
-            <input min="1" onChange={(event) => setDailyPower(event.target.value)} placeholder="Damage per card" type="number" value={dailyPower} />
             <div className="form-grid">
               <select onChange={(event) => setDailyRecurrence(event.target.value as Recurrence)} value={dailyRecurrence}>
                 {recurrenceOptions.map((option) => (
@@ -1808,13 +1922,13 @@ export default function App() {
             <article className="game-card list-card deck-card" key={quest.id}>
               <div className="battle-card-topline">
                 <span className="battle-card-type">daily deck</span>
-                <span className="battle-stat-chip">{quest.cardPower} dmg</span>
+                <span className="battle-stat-chip">{quest.cards.reduce((total, card) => total + card.cardPower, 0)} dmg</span>
               </div>
               <div className="deck-card-body">
                 <div className="deck-card-copy">
                   <strong>{quest.title}</strong>
                   <small className="deck-card-meta">
-                    {quest.targetCount} cards
+                    {quest.cards.length} cards
                     <span aria-hidden="true">·</span>
                     +{quest.xp} XP
                     <span aria-hidden="true">·</span>
@@ -1826,23 +1940,56 @@ export default function App() {
                 </div>
               </div>
               <div className="mini-stepper" aria-label={`${quest.title} progress`}>
-                <button className="ghost-button" onClick={() => setDailyQuestProgress(quest.id, quest.progressCount - 1)} type="button">
+                <button className="ghost-button" onClick={() => setDailyQuestProgress(quest.id, getDailyQuestPlayedCount(quest) - 1)} type="button">
                   -
                 </button>
-                <span>{quest.progressCount}</span>
-                <button className="ghost-button" onClick={() => setDailyQuestProgress(quest.id, quest.progressCount + 1)} type="button">
+                <span>{getDailyQuestPlayedCount(quest)}</span>
+                <button className="ghost-button" onClick={() => setDailyQuestProgress(quest.id, getDailyQuestPlayedCount(quest) + 1)} type="button">
                   +
                 </button>
               </div>
+              <ul className="objective-list" aria-label={`${quest.title} cards`}>
+                {quest.cards.map((card) => (
+                  <li key={card.id}>
+                    <label className="objective-check">
+                      <input checked={card.done} onChange={() => toggleDailyCard(quest.id, card.id)} type="checkbox" />
+                      <span>
+                        {card.title}
+                        <small className="objective-power">{card.cardPower} dmg</small>
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
               {editingDailyId === quest.id ? (
                 <form className="quest-form edit-form" onSubmit={saveDailyQuestEdit}>
                   <h3>Edit Daily Deck</h3>
                   <input onChange={(event) => setEditingDailyTitle(event.target.value)} placeholder="Routine title" value={editingDailyTitle} />
-                  <div className="form-grid">
-                    <input min="0" onChange={(event) => setEditingDailyXp(event.target.value)} placeholder="XP reward" type="number" value={editingDailyXp} />
-                    <input min="1" onChange={(event) => setEditingDailyTarget(event.target.value)} placeholder="Number of cards" type="number" value={editingDailyTarget} />
+                  <input min="0" onChange={(event) => setEditingDailyXp(event.target.value)} placeholder="XP reward" type="number" value={editingDailyXp} />
+                  <div className="card-builder" aria-label="Edit daily quest cards">
+                    {editingDailyCards.map((card, index) => (
+                      <div className="card-builder-row" key={card.id}>
+                        <input
+                          onChange={(event) => updateDraftCard(card.id, 'title', event.target.value, setEditingDailyCards)}
+                          placeholder={`Card ${index + 1} title`}
+                          value={card.title}
+                        />
+                        <input
+                          min="1"
+                          onChange={(event) => updateDraftCard(card.id, 'cardPower', event.target.value, setEditingDailyCards)}
+                          placeholder="Damage"
+                          type="number"
+                          value={card.cardPower}
+                        />
+                        <button className="ghost-button card-row-button" onClick={() => removeDraftCard(card.id, setEditingDailyCards, '3')} type="button">
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                    <button className="ghost-button add-card-button" onClick={() => addDraftCard(setEditingDailyCards, '3')} type="button">
+                      Add Card
+                    </button>
                   </div>
-                  <input min="1" onChange={(event) => setEditingDailyPower(event.target.value)} placeholder="Damage per card" type="number" value={editingDailyPower} />
                   <div className="form-grid">
                     <select onChange={(event) => setEditingDailyRecurrence(event.target.value as Recurrence)} value={editingDailyRecurrence}>
                       {recurrenceOptions.map((option) => (
