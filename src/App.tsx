@@ -52,7 +52,7 @@ type Quest = {
 };
 
 type BoardSelection =
-  | { kind: 'daily' }
+  | { kind: 'daily'; questId: string }
   | { kind: 'side'; questId: string }
   | { kind: 'main'; questId: string };
 
@@ -595,17 +595,21 @@ function buildBattleState(
   mainQuests: Quest[],
 ): BattleState | null {
   if (selection.kind === 'daily') {
-    const cards = dailyQuests.flatMap<BattleCard>((quest) =>
-      quest.cards.map((card) => ({
-        id: card.id,
-        originId: quest.id,
-        title: card.title,
-        cardPower: card.cardPower,
-        played: card.done,
-        flavor: `${card.cardPower} damage splash`,
-        family: 'daily',
-      })),
-    );
+    const quest = dailyQuests.find((item) => item.id === selection.questId);
+
+    if (!quest) {
+      return null;
+    }
+
+    const cards = quest.cards.map<BattleCard>((card) => ({
+      id: card.id,
+      originId: quest.id,
+      title: card.title,
+      cardPower: card.cardPower,
+      played: card.done,
+      flavor: `${card.cardPower} damage splash`,
+      family: 'daily',
+    }));
     const totalHp = cards.reduce((total, card) => total + card.cardPower, 0);
     const currentHp = Math.max(
       0,
@@ -613,8 +617,8 @@ function buildBattleState(
     );
 
     return {
-      title: 'Daily Card Battle',
-      subtitle: 'Play your routine cards from hand onto the battlefield to chip down the monster.',
+      title: quest.title,
+      subtitle: `Daily deck worth +${quest.xp} XP.`,
       monsterName: currentHp === 0 ? 'Hydra of Habits Defeated' : 'Hydra of Habits',
       monsterMood: currentHp === 0 ? 'Collapsed under your routine combo.' : 'Still feeding on skipped habits.',
       totalHp: Math.max(totalHp, 1),
@@ -1403,7 +1407,7 @@ export default function App() {
 
       setDailyQuests((current) =>
         current.map((quest) => {
-          if (!quest.cards.some((card) => card.id === cardId)) {
+          if (quest.id !== selectedBoard.questId) {
             return quest;
           }
 
@@ -1481,7 +1485,7 @@ export default function App() {
     if (selectedBoard.kind === 'daily') {
       setDailyQuests((current) =>
         current.map((quest) =>
-          quest.cards.some((card) => card.id === cardId)
+          quest.id === selectedBoard.questId
             ? {
                 ...quest,
                 cards: quest.cards.map((card) =>
@@ -1526,11 +1530,15 @@ export default function App() {
 
     if (selectedBoard.kind === 'daily') {
       setDailyQuests((current) =>
-        current.map((quest) => ({
-          ...quest,
-          completedAt: undefined,
-          cards: quest.cards.map((card) => ({ ...card, done: false })),
-        })),
+        current.map((quest) =>
+          quest.id === selectedBoard.questId
+            ? {
+                ...quest,
+                completedAt: undefined,
+                cards: quest.cards.map((card) => ({ ...card, done: false })),
+              }
+            : quest,
+        ),
       );
       return;
     }
@@ -2020,7 +2028,7 @@ export default function App() {
                 </form>
               ) : null}
               <div className="card-actions">
-                <button className="ghost-button" onClick={() => setSelectedBoard({ kind: 'daily' })} type="button">
+                <button className="ghost-button" onClick={() => setSelectedBoard({ kind: 'daily', questId: quest.id })} type="button">
                   Open Battle
                 </button>
                 <button className="ghost-button" onClick={() => startEditingDailyQuest(quest)} type="button">
