@@ -17,6 +17,8 @@ type DailyQuest = {
   title: string;
   xp: number;
   cards: Objective[];
+  monsterArt?: string;
+  monsterHp?: number;
   recurrence: Recurrence;
   deadlineType: DeadlineType;
   deadlineAt?: string;
@@ -42,6 +44,8 @@ type Quest = {
   xp?: number;
   difficulty?: string;
   monsterName?: string;
+  monsterArt?: string;
+  monsterHp?: number;
   reward: string;
   done: boolean;
   objectives: Objective[];
@@ -77,6 +81,7 @@ type BattleState = {
   title: string;
   subtitle: string;
   monsterName: string;
+  monsterArt: string;
   monsterMood: string;
   totalHp: number;
   currentHp: number;
@@ -120,6 +125,8 @@ const defaultDailyQuests: DailyQuest[] = [
       { id: 'daily-1-card-4', title: 'Dinner refill', cardPower: 3, done: false },
       { id: 'daily-1-card-5', title: 'Night glass', cardPower: 3, done: false },
     ],
+    monsterArt: '🐉',
+    monsterHp: 15,
     recurrence: 'daily',
     deadlineType: 'endOfDay',
   },
@@ -128,6 +135,8 @@ const defaultDailyQuests: DailyQuest[] = [
     title: 'Shower',
     xp: 15,
     cards: [{ id: 'daily-2-card-1', title: 'Take shower', cardPower: 8, done: false }],
+    monsterArt: '🦠',
+    monsterHp: 8,
     recurrence: 'daily',
     deadlineType: 'endOfDay',
   },
@@ -139,6 +148,8 @@ const defaultDailyQuests: DailyQuest[] = [
       { id: 'daily-3-card-1', title: 'Brush in morning', cardPower: 4, done: true },
       { id: 'daily-3-card-2', title: 'Brush at night', cardPower: 4, done: false },
     ],
+    monsterArt: '🪥',
+    monsterHp: 8,
     recurrence: 'daily',
     deadlineType: 'endOfDay',
   },
@@ -147,6 +158,8 @@ const defaultDailyQuests: DailyQuest[] = [
     title: '30 minute workout',
     xp: 35,
     cards: [{ id: 'daily-4-card-1', title: 'Workout session', cardPower: 12, done: false }],
+    monsterArt: '💪',
+    monsterHp: 12,
     recurrence: 'daily',
     deadlineType: 'endOfDay',
   },
@@ -159,6 +172,8 @@ const defaultSideQuests: Quest[] = [
     xp: 8,
     difficulty: 'Quick win',
     reward: '15 minutes guilt-free scrolling',
+    monsterArt: '🗡️',
+    monsterHp: 15,
     done: false,
     recurrence: 'none',
     deadlineType: 'none',
@@ -174,6 +189,8 @@ const defaultSideQuests: Quest[] = [
     xp: 12,
     difficulty: 'Easy',
     reward: 'Fresh coffee after cleanup',
+    monsterArt: '🧹',
+    monsterHp: 15,
     done: false,
     recurrence: 'none',
     deadlineType: 'none',
@@ -189,6 +206,8 @@ const defaultSideQuests: Quest[] = [
     xp: 18,
     difficulty: 'Medium',
     reward: 'New sticker unlock',
+    monsterArt: '📚',
+    monsterHp: 21,
     done: false,
     recurrence: 'none',
     deadlineType: 'none',
@@ -205,6 +224,8 @@ const defaultMainQuests: Quest[] = [
     id: 'main-1',
     title: 'Hit a 5-day streak',
     reward: 'Weekend cafe visit',
+    monsterArt: '👑',
+    monsterHp: 18,
     done: false,
     recurrence: 'weekly',
     deadlineType: 'endOfWeek',
@@ -217,6 +238,8 @@ const defaultMainQuests: Quest[] = [
     id: 'main-2',
     title: 'Launch Quest Cat v1',
     reward: 'Buy a custom cat icon pack',
+    monsterArt: '🚀',
+    monsterHp: 28,
     done: false,
     recurrence: 'none',
     deadlineType: 'none',
@@ -247,6 +270,16 @@ function getDailyProgressLabel(quest: DailyQuest) {
 
 function getDailyQuestPlayedCount(quest: DailyQuest) {
   return quest.cards.filter((card) => card.done).length;
+}
+
+function normalizeMonsterArt(value: string | undefined, fallback: string) {
+  const trimmed = value?.trim();
+  return trimmed || fallback;
+}
+
+function normalizeMonsterHp(value: number | undefined, fallback: number) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : fallback;
 }
 
 function getStartOfDay(date: Date) {
@@ -467,6 +500,8 @@ function normalizeDailyQuest(
     title: quest.title ?? 'New daily routine',
     xp: Number(quest.xp ?? 10),
     cards,
+    monsterArt: quest.monsterArt?.trim() || undefined,
+    monsterHp: normalizeMonsterHp(quest.monsterHp, cards.reduce((total, card) => total + card.cardPower, 0)),
     recurrence: quest.recurrence ?? 'daily',
     deadlineType: quest.deadlineType ?? 'endOfDay',
     deadlineAt: normalizeDeadlineAt(quest.deadlineType ?? 'endOfDay', quest.deadlineAt),
@@ -528,6 +563,8 @@ function normalizeQuest(quest: Partial<Quest>) {
     xp: quest.xp,
     difficulty: quest.difficulty,
     monsterName: quest.monsterName?.trim() || undefined,
+    monsterArt: quest.monsterArt?.trim() || undefined,
+    monsterHp: normalizeMonsterHp(quest.monsterHp, objectives.reduce((total, objective) => total + objective.cardPower, 0)),
     reward: quest.reward ?? 'Mystery reward',
     done,
     objectives,
@@ -610,7 +647,8 @@ function buildBattleState(
       flavor: `${card.cardPower} damage splash`,
       family: 'daily',
     }));
-    const totalHp = cards.reduce((total, card) => total + card.cardPower, 0);
+    const cardDamageTotal = cards.reduce((total, card) => total + card.cardPower, 0);
+    const totalHp = normalizeMonsterHp(quest.monsterHp, cardDamageTotal);
     const currentHp = Math.max(
       0,
       totalHp - cards.filter((card) => card.played).reduce((total, card) => total + card.cardPower, 0),
@@ -619,6 +657,7 @@ function buildBattleState(
     return {
       title: quest.title,
       subtitle: `Daily deck worth +${quest.xp} XP.`,
+      monsterArt: normalizeMonsterArt(quest.monsterArt, '👹'),
       monsterName: currentHp === 0 ? 'Hydra of Habits Defeated' : 'Hydra of Habits',
       monsterMood: currentHp === 0 ? 'Collapsed under your routine combo.' : 'Still feeding on skipped habits.',
       totalHp: Math.max(totalHp, 1),
@@ -643,7 +682,8 @@ function buildBattleState(
     flavor: selection.kind === 'side' ? 'Tactical side-quest move' : 'Storyline power move',
     family: selection.kind,
   }));
-  const totalHp = cards.reduce((total, card) => total + card.cardPower, 0);
+  const cardDamageTotal = cards.reduce((total, card) => total + card.cardPower, 0);
+  const totalHp = normalizeMonsterHp(quest.monsterHp, cardDamageTotal);
   const currentHp = Math.max(
     0,
     totalHp - cards.filter((card) => card.played).reduce((total, card) => total + card.cardPower, 0),
@@ -653,6 +693,7 @@ function buildBattleState(
   return {
     title: quest.title,
     subtitle: quest.reward,
+    monsterArt: normalizeMonsterArt(quest.monsterArt, selection.kind === 'side' ? '🗡️' : '👑'),
     monsterName,
     monsterMood: selection.kind === 'side' ? 'A quick skirmish with bonus loot.' : 'A larger boss battle with story stakes.',
     totalHp: Math.max(totalHp, 1),
@@ -725,7 +766,7 @@ function BattleBoard({
               <span className="battle-card-type">Boss</span>
             </div>
             <div className="monster-boss-art" aria-hidden="true">
-              {monsterDefeated ? '💥' : '👹'}
+              {monsterDefeated ? '💥' : battleState.monsterArt}
             </div>
             <strong>{battleState.monsterName}</strong>
             <small>{battleState.monsterMood}</small>
@@ -841,6 +882,8 @@ export default function App() {
   const [dailyTitle, setDailyTitle] = useState('');
   const [dailyXp, setDailyXp] = useState('10');
   const [dailyCards, setDailyCards] = useState<DraftCard[]>([createDraftCard('3')]);
+  const [dailyMonsterArt, setDailyMonsterArt] = useState('👹');
+  const [dailyMonsterHp, setDailyMonsterHp] = useState('10');
   const [dailyRecurrence, setDailyRecurrence] = useState<Recurrence>('daily');
   const [dailyDeadlineType, setDailyDeadlineType] = useState<DeadlineType>('endOfDay');
   const [dailyDeadlineAt, setDailyDeadlineAt] = useState('');
@@ -848,6 +891,8 @@ export default function App() {
   const [editingDailyTitle, setEditingDailyTitle] = useState('');
   const [editingDailyXp, setEditingDailyXp] = useState('10');
   const [editingDailyCards, setEditingDailyCards] = useState<DraftCard[]>([createDraftCard('3')]);
+  const [editingDailyMonsterArt, setEditingDailyMonsterArt] = useState('👹');
+  const [editingDailyMonsterHp, setEditingDailyMonsterHp] = useState('10');
   const [editingDailyRecurrence, setEditingDailyRecurrence] = useState<Recurrence>('daily');
   const [editingDailyDeadlineType, setEditingDailyDeadlineType] = useState<DeadlineType>('endOfDay');
   const [editingDailyDeadlineAt, setEditingDailyDeadlineAt] = useState('');
@@ -858,6 +903,8 @@ export default function App() {
   const [sideReward, setSideReward] = useState('');
   const [sideMonsterMode, setSideMonsterMode] = useState<'auto' | 'custom'>('auto');
   const [sideMonsterName, setSideMonsterName] = useState('');
+  const [sideMonsterArt, setSideMonsterArt] = useState('🗡️');
+  const [sideMonsterHp, setSideMonsterHp] = useState('12');
   const [sideCards, setSideCards] = useState<DraftCard[]>([createDraftCard('6')]);
   const [sideRecurrence, setSideRecurrence] = useState<Recurrence>('none');
   const [sideDeadlineType, setSideDeadlineType] = useState<DeadlineType>('none');
@@ -869,6 +916,8 @@ export default function App() {
   const [editingSideReward, setEditingSideReward] = useState('');
   const [editingSideMonsterMode, setEditingSideMonsterMode] = useState<'auto' | 'custom'>('auto');
   const [editingSideMonsterName, setEditingSideMonsterName] = useState('');
+  const [editingSideMonsterArt, setEditingSideMonsterArt] = useState('🗡️');
+  const [editingSideMonsterHp, setEditingSideMonsterHp] = useState('12');
   const [editingSideCards, setEditingSideCards] = useState<DraftCard[]>([createDraftCard('6')]);
   const [editingSideRecurrence, setEditingSideRecurrence] = useState<Recurrence>('none');
   const [editingSideDeadlineType, setEditingSideDeadlineType] = useState<DeadlineType>('none');
@@ -878,6 +927,8 @@ export default function App() {
   const [mainReward, setMainReward] = useState('');
   const [mainMonsterMode, setMainMonsterMode] = useState<'auto' | 'custom'>('auto');
   const [mainMonsterName, setMainMonsterName] = useState('');
+  const [mainMonsterArt, setMainMonsterArt] = useState('👑');
+  const [mainMonsterHp, setMainMonsterHp] = useState('20');
   const [mainCards, setMainCards] = useState<DraftCard[]>([createDraftCard('10')]);
   const [mainRecurrence, setMainRecurrence] = useState<Recurrence>('none');
   const [mainDeadlineType, setMainDeadlineType] = useState<DeadlineType>('none');
@@ -887,6 +938,8 @@ export default function App() {
   const [editingMainReward, setEditingMainReward] = useState('');
   const [editingMainMonsterMode, setEditingMainMonsterMode] = useState<'auto' | 'custom'>('auto');
   const [editingMainMonsterName, setEditingMainMonsterName] = useState('');
+  const [editingMainMonsterArt, setEditingMainMonsterArt] = useState('👑');
+  const [editingMainMonsterHp, setEditingMainMonsterHp] = useState('20');
   const [editingMainCards, setEditingMainCards] = useState<DraftCard[]>([createDraftCard('10')]);
   const [editingMainRecurrence, setEditingMainRecurrence] = useState<Recurrence>('none');
   const [editingMainDeadlineType, setEditingMainDeadlineType] = useState<DeadlineType>('none');
@@ -1005,12 +1058,15 @@ export default function App() {
     const title = dailyTitle.trim();
     const xp = Number(dailyXp);
     const cards = normalizeDraftCards(dailyCards, 3);
+    const monsterHp = Number(dailyMonsterHp);
 
     if (
       !title ||
       Number.isNaN(xp) ||
       xp < 0 ||
       cards.length === 0 ||
+      Number.isNaN(monsterHp) ||
+      monsterHp < 1 ||
       !hasValidDeadline(dailyDeadlineType, dailyDeadlineAt)
     ) {
       return;
@@ -1023,6 +1079,8 @@ export default function App() {
         title,
         xp,
         cards,
+        monsterArt: dailyMonsterArt.trim() || undefined,
+        monsterHp,
         recurrence: dailyRecurrence,
         deadlineType: dailyDeadlineType,
         deadlineAt: normalizeDeadlineAt(dailyDeadlineType, dailyDeadlineAt),
@@ -1031,6 +1089,8 @@ export default function App() {
     setDailyTitle('');
     setDailyXp('10');
     setDailyCards([createDraftCard('3')]);
+    setDailyMonsterArt('👹');
+    setDailyMonsterHp('10');
     setDailyRecurrence('daily');
     setDailyDeadlineType('endOfDay');
     setDailyDeadlineAt('');
@@ -1064,6 +1124,7 @@ export default function App() {
     const title = sideTitle.trim();
     const reward = sideReward.trim();
     const xp = Number(sideXp);
+    const monsterHp = Number(sideMonsterHp);
     const objectives = normalizeDraftCards(sideCards, Math.max(4, Math.ceil((xp || 12) / 2)));
 
     if (
@@ -1071,6 +1132,8 @@ export default function App() {
       !reward ||
       Number.isNaN(xp) ||
       xp < 0 ||
+      Number.isNaN(monsterHp) ||
+      monsterHp < 1 ||
       objectives.length === 0 ||
       !hasValidDeadline(sideDeadlineType, sideDeadlineAt)
     ) {
@@ -1085,6 +1148,8 @@ export default function App() {
         xp,
         difficulty: sideDifficulty.trim() || 'Custom',
         monsterName: sideMonsterMode === 'custom' ? sideMonsterName.trim() || undefined : undefined,
+        monsterArt: sideMonsterArt.trim() || undefined,
+        monsterHp,
         reward,
         done: false,
         objectives,
@@ -1099,6 +1164,8 @@ export default function App() {
     setSideReward('');
     setSideMonsterMode('auto');
     setSideMonsterName('');
+    setSideMonsterArt('🗡️');
+    setSideMonsterHp('12');
     setSideCards([createDraftCard('6')]);
     setSideRecurrence('none');
     setSideDeadlineType('none');
@@ -1110,9 +1177,17 @@ export default function App() {
 
     const title = mainTitle.trim();
     const reward = mainReward.trim();
+    const monsterHp = Number(mainMonsterHp);
     const objectives = normalizeDraftCards(mainCards, 8);
 
-    if (!title || !reward || objectives.length === 0 || !hasValidDeadline(mainDeadlineType, mainDeadlineAt)) {
+    if (
+      !title ||
+      !reward ||
+      Number.isNaN(monsterHp) ||
+      monsterHp < 1 ||
+      objectives.length === 0 ||
+      !hasValidDeadline(mainDeadlineType, mainDeadlineAt)
+    ) {
       return;
     }
 
@@ -1122,6 +1197,8 @@ export default function App() {
         id: createId('main'),
         title,
         monsterName: mainMonsterMode === 'custom' ? mainMonsterName.trim() || undefined : undefined,
+        monsterArt: mainMonsterArt.trim() || undefined,
+        monsterHp,
         reward,
         done: false,
         objectives,
@@ -1134,6 +1211,8 @@ export default function App() {
     setMainReward('');
     setMainMonsterMode('auto');
     setMainMonsterName('');
+    setMainMonsterArt('👑');
+    setMainMonsterHp('20');
     setMainCards([createDraftCard('10')]);
     setMainRecurrence('none');
     setMainDeadlineType('none');
@@ -1145,6 +1224,8 @@ export default function App() {
     setEditingDailyTitle(quest.title);
     setEditingDailyXp(String(quest.xp));
     setEditingDailyCards(objectivesToDraftCards(quest.cards));
+    setEditingDailyMonsterArt(quest.monsterArt ?? '👹');
+    setEditingDailyMonsterHp(String(quest.monsterHp ?? quest.cards.reduce((total, card) => total + card.cardPower, 0)));
     setEditingDailyRecurrence(quest.recurrence);
     setEditingDailyDeadlineType(quest.deadlineType);
     setEditingDailyDeadlineAt(quest.deadlineAt ?? '');
@@ -1164,12 +1245,15 @@ export default function App() {
     const title = editingDailyTitle.trim();
     const xp = Number(editingDailyXp);
     const cards = normalizeDraftCards(editingDailyCards, 3);
+    const monsterHp = Number(editingDailyMonsterHp);
 
     if (
       !title ||
       Number.isNaN(xp) ||
       xp < 0 ||
       cards.length === 0 ||
+      Number.isNaN(monsterHp) ||
+      monsterHp < 1 ||
       !hasValidDeadline(editingDailyDeadlineType, editingDailyDeadlineAt)
     ) {
       return;
@@ -1188,6 +1272,8 @@ export default function App() {
           title,
           xp,
           cards: cards.map((card, index) => ({ ...card, done: index < nextPlayedCount })),
+          monsterArt: editingDailyMonsterArt.trim() || undefined,
+          monsterHp,
           recurrence: editingDailyRecurrence,
           deadlineType: editingDailyDeadlineType,
           deadlineAt: normalizeDeadlineAt(editingDailyDeadlineType, editingDailyDeadlineAt),
@@ -1207,6 +1293,8 @@ export default function App() {
     setEditingSideReward(quest.reward);
     setEditingSideMonsterMode(quest.monsterName ? 'custom' : 'auto');
     setEditingSideMonsterName(quest.monsterName ?? '');
+    setEditingSideMonsterArt(quest.monsterArt ?? '🗡️');
+    setEditingSideMonsterHp(String(quest.monsterHp ?? quest.objectives.reduce((total, objective) => total + objective.cardPower, 0)));
     setEditingSideCards(objectivesToDraftCards(quest.objectives));
     setEditingSideRecurrence(quest.recurrence);
     setEditingSideDeadlineType(quest.deadlineType);
@@ -1227,6 +1315,7 @@ export default function App() {
     const title = editingSideTitle.trim();
     const reward = editingSideReward.trim();
     const xp = Number(editingSideXp);
+    const monsterHp = Number(editingSideMonsterHp);
     const objectives = normalizeDraftCards(editingSideCards, Math.max(4, Math.ceil((xp || 12) / 2)));
 
     if (
@@ -1234,6 +1323,8 @@ export default function App() {
       !reward ||
       Number.isNaN(xp) ||
       xp < 0 ||
+      Number.isNaN(monsterHp) ||
+      monsterHp < 1 ||
       objectives.length === 0 ||
       !hasValidDeadline(editingSideDeadlineType, editingSideDeadlineAt)
     ) {
@@ -1250,6 +1341,8 @@ export default function App() {
               difficulty: editingSideDifficulty.trim() || 'Custom',
               reward,
               monsterName: editingSideMonsterMode === 'custom' ? editingSideMonsterName.trim() || undefined : undefined,
+              monsterArt: editingSideMonsterArt.trim() || undefined,
+              monsterHp,
               objectives,
               done: false,
               completedAt: undefined,
@@ -1270,6 +1363,8 @@ export default function App() {
     setEditingMainReward(quest.reward);
     setEditingMainMonsterMode(quest.monsterName ? 'custom' : 'auto');
     setEditingMainMonsterName(quest.monsterName ?? '');
+    setEditingMainMonsterArt(quest.monsterArt ?? '👑');
+    setEditingMainMonsterHp(String(quest.monsterHp ?? quest.objectives.reduce((total, objective) => total + objective.cardPower, 0)));
     setEditingMainCards(objectivesToDraftCards(quest.objectives));
     setEditingMainRecurrence(quest.recurrence);
     setEditingMainDeadlineType(quest.deadlineType);
@@ -1289,9 +1384,17 @@ export default function App() {
 
     const title = editingMainTitle.trim();
     const reward = editingMainReward.trim();
+    const monsterHp = Number(editingMainMonsterHp);
     const objectives = normalizeDraftCards(editingMainCards, 8);
 
-    if (!title || !reward || objectives.length === 0 || !hasValidDeadline(editingMainDeadlineType, editingMainDeadlineAt)) {
+    if (
+      !title ||
+      !reward ||
+      Number.isNaN(monsterHp) ||
+      monsterHp < 1 ||
+      objectives.length === 0 ||
+      !hasValidDeadline(editingMainDeadlineType, editingMainDeadlineAt)
+    ) {
       return;
     }
 
@@ -1303,6 +1406,8 @@ export default function App() {
               title,
               reward,
               monsterName: editingMainMonsterMode === 'custom' ? editingMainMonsterName.trim() || undefined : undefined,
+              monsterArt: editingMainMonsterArt.trim() || undefined,
+              monsterHp,
               objectives,
               done: false,
               completedAt: undefined,
@@ -1706,6 +1811,10 @@ export default function App() {
             <p className="form-note">Create a repeatable routine deck with named cards you can add and edit.</p>
             <input onChange={(event) => setDailyTitle(event.target.value)} placeholder="Routine title" value={dailyTitle} />
             <input min="0" onChange={(event) => setDailyXp(event.target.value)} placeholder="XP reward" type="number" value={dailyXp} />
+            <div className="form-grid">
+              <input onChange={(event) => setDailyMonsterArt(event.target.value)} placeholder="Monster look (emoji/icon)" value={dailyMonsterArt} />
+              <input min="1" onChange={(event) => setDailyMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={dailyMonsterHp} />
+            </div>
             <div className="card-builder" aria-label="Daily quest cards">
               {dailyCards.map((card, index) => (
                 <div className="card-builder-row" key={card.id}>
@@ -1765,6 +1874,10 @@ export default function App() {
               <input onChange={(event) => setSideDifficulty(event.target.value)} placeholder="Difficulty" value={sideDifficulty} />
             </div>
             <input onChange={(event) => setSideReward(event.target.value)} placeholder="Reward for completion" value={sideReward} />
+            <div className="form-grid">
+              <input onChange={(event) => setSideMonsterArt(event.target.value)} placeholder="Monster look (emoji/icon)" value={sideMonsterArt} />
+              <input min="1" onChange={(event) => setSideMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={sideMonsterHp} />
+            </div>
             <div className="form-grid">
               <select onChange={(event) => setSideRecurrence(event.target.value as Recurrence)} value={sideRecurrence}>
                 {recurrenceOptions.map((option) => (
@@ -1841,6 +1954,10 @@ export default function App() {
             <p className="form-note">Create a larger boss battle with a completion reward and a full hand of cards.</p>
             <input onChange={(event) => setMainTitle(event.target.value)} placeholder="Main quest title" value={mainTitle} />
             <input onChange={(event) => setMainReward(event.target.value)} placeholder="Reward for completion" value={mainReward} />
+            <div className="form-grid">
+              <input onChange={(event) => setMainMonsterArt(event.target.value)} placeholder="Monster look (emoji/icon)" value={mainMonsterArt} />
+              <input min="1" onChange={(event) => setMainMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={mainMonsterHp} />
+            </div>
             <div className="form-grid">
               <select onChange={(event) => setMainRecurrence(event.target.value as Recurrence)} value={mainRecurrence}>
                 {recurrenceOptions.map((option) => (
@@ -1974,6 +2091,10 @@ export default function App() {
                   <h3>Edit Daily Deck</h3>
                   <input onChange={(event) => setEditingDailyTitle(event.target.value)} placeholder="Routine title" value={editingDailyTitle} />
                   <input min="0" onChange={(event) => setEditingDailyXp(event.target.value)} placeholder="XP reward" type="number" value={editingDailyXp} />
+                  <div className="form-grid">
+                    <input onChange={(event) => setEditingDailyMonsterArt(event.target.value)} placeholder="Monster look (emoji/icon)" value={editingDailyMonsterArt} />
+                    <input min="1" onChange={(event) => setEditingDailyMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={editingDailyMonsterHp} />
+                  </div>
                   <div className="card-builder" aria-label="Edit daily quest cards">
                     {editingDailyCards.map((card, index) => (
                       <div className="card-builder-row" key={card.id}>
@@ -2098,6 +2219,10 @@ export default function App() {
                       <input onChange={(event) => setEditingSideDifficulty(event.target.value)} placeholder="Difficulty" value={editingSideDifficulty} />
                     </div>
                     <input onChange={(event) => setEditingSideReward(event.target.value)} placeholder="Reward for completion" value={editingSideReward} />
+                    <div className="form-grid">
+                      <input onChange={(event) => setEditingSideMonsterArt(event.target.value)} placeholder="Monster look (emoji/icon)" value={editingSideMonsterArt} />
+                      <input min="1" onChange={(event) => setEditingSideMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={editingSideMonsterHp} />
+                    </div>
                     <div className="form-grid">
                       <select onChange={(event) => setEditingSideRecurrence(event.target.value as Recurrence)} value={editingSideRecurrence}>
                         {recurrenceOptions.map((option) => (
@@ -2238,6 +2363,10 @@ export default function App() {
                     <h3>Edit Main Quest</h3>
                     <input onChange={(event) => setEditingMainTitle(event.target.value)} placeholder="Main quest title" value={editingMainTitle} />
                     <input onChange={(event) => setEditingMainReward(event.target.value)} placeholder="Reward for completion" value={editingMainReward} />
+                    <div className="form-grid">
+                      <input onChange={(event) => setEditingMainMonsterArt(event.target.value)} placeholder="Monster look (emoji/icon)" value={editingMainMonsterArt} />
+                      <input min="1" onChange={(event) => setEditingMainMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={editingMainMonsterHp} />
+                    </div>
                     <div className="form-grid">
                       <select onChange={(event) => setEditingMainRecurrence(event.target.value as Recurrence)} value={editingMainRecurrence}>
                         {recurrenceOptions.map((option) => (
