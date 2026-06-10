@@ -125,7 +125,7 @@ const defaultDailyQuests: DailyQuest[] = [
       { id: 'daily-1-card-4', title: 'Dinner refill', cardPower: 3, done: false },
       { id: 'daily-1-card-5', title: 'Night glass', cardPower: 3, done: false },
     ],
-    monsterArt: '🐉',
+    monsterArt: '🗡️',
     monsterHp: 15,
     recurrence: 'daily',
     deadlineType: 'endOfDay',
@@ -135,7 +135,7 @@ const defaultDailyQuests: DailyQuest[] = [
     title: 'Shower',
     xp: 15,
     cards: [{ id: 'daily-2-card-1', title: 'Take shower', cardPower: 8, done: false }],
-    monsterArt: '🦠',
+    monsterArt: '🗡️',
     monsterHp: 8,
     recurrence: 'daily',
     deadlineType: 'endOfDay',
@@ -148,7 +148,7 @@ const defaultDailyQuests: DailyQuest[] = [
       { id: 'daily-3-card-1', title: 'Brush in morning', cardPower: 4, done: true },
       { id: 'daily-3-card-2', title: 'Brush at night', cardPower: 4, done: false },
     ],
-    monsterArt: '🪥',
+    monsterArt: '🗡️',
     monsterHp: 8,
     recurrence: 'daily',
     deadlineType: 'endOfDay',
@@ -158,7 +158,7 @@ const defaultDailyQuests: DailyQuest[] = [
     title: '30 minute workout',
     xp: 35,
     cards: [{ id: 'daily-4-card-1', title: 'Workout session', cardPower: 12, done: false }],
-    monsterArt: '💪',
+    monsterArt: '🗡️',
     monsterHp: 12,
     recurrence: 'daily',
     deadlineType: 'endOfDay',
@@ -189,7 +189,7 @@ const defaultSideQuests: Quest[] = [
     xp: 12,
     difficulty: 'Easy',
     reward: 'Fresh coffee after cleanup',
-    monsterArt: '🧹',
+    monsterArt: '🗡️',
     monsterHp: 15,
     done: false,
     recurrence: 'none',
@@ -206,7 +206,7 @@ const defaultSideQuests: Quest[] = [
     xp: 18,
     difficulty: 'Medium',
     reward: 'New sticker unlock',
-    monsterArt: '📚',
+    monsterArt: '🗡️',
     monsterHp: 21,
     done: false,
     recurrence: 'none',
@@ -224,7 +224,7 @@ const defaultMainQuests: Quest[] = [
     id: 'main-1',
     title: 'Hit a 5-day streak',
     reward: 'Weekend cafe visit',
-    monsterArt: '👑',
+    monsterArt: '🗡️',
     monsterHp: 18,
     done: false,
     recurrence: 'weekly',
@@ -238,7 +238,7 @@ const defaultMainQuests: Quest[] = [
     id: 'main-2',
     title: 'Launch Quest Cat v1',
     reward: 'Buy a custom cat icon pack',
-    monsterArt: '🚀',
+    monsterArt: '🗡️',
     monsterHp: 28,
     done: false,
     recurrence: 'none',
@@ -275,6 +275,10 @@ function getDailyQuestPlayedCount(quest: DailyQuest) {
 function normalizeMonsterArt(value: string | undefined, fallback: string) {
   const trimmed = value?.trim();
   return trimmed || fallback;
+}
+
+function isImageLike(value: string) {
+  return /^(https?:\/\/|data:image\/|\/)/i.test(value);
 }
 
 function normalizeMonsterHp(value: number | undefined, fallback: number) {
@@ -657,7 +661,7 @@ function buildBattleState(
     return {
       title: quest.title,
       subtitle: `Daily deck worth +${quest.xp} XP.`,
-      monsterArt: normalizeMonsterArt(quest.monsterArt, '👹'),
+      monsterArt: normalizeMonsterArt(quest.monsterArt, '🗡️'),
       monsterName: currentHp === 0 ? 'Hydra of Habits Defeated' : 'Hydra of Habits',
       monsterMood: currentHp === 0 ? 'Collapsed under your routine combo.' : 'Still feeding on skipped habits.',
       totalHp: Math.max(totalHp, 1),
@@ -693,7 +697,7 @@ function buildBattleState(
   return {
     title: quest.title,
     subtitle: quest.reward,
-    monsterArt: normalizeMonsterArt(quest.monsterArt, selection.kind === 'side' ? '🗡️' : '👑'),
+    monsterArt: normalizeMonsterArt(quest.monsterArt, '🗡️'),
     monsterName,
     monsterMood: selection.kind === 'side' ? 'A quick skirmish with bonus loot.' : 'A larger boss battle with story stakes.',
     totalHp: Math.max(totalHp, 1),
@@ -766,7 +770,13 @@ function BattleBoard({
               <span className="battle-card-type">Boss</span>
             </div>
             <div className="monster-boss-art" aria-hidden="true">
-              {monsterDefeated ? '💥' : battleState.monsterArt}
+              {monsterDefeated ? (
+                '💥'
+              ) : isImageLike(battleState.monsterArt) ? (
+                <img alt="" className="monster-boss-image" src={battleState.monsterArt} />
+              ) : (
+                battleState.monsterArt
+              )}
             </div>
             <strong>{battleState.monsterName}</strong>
             <small>{battleState.monsterMood}</small>
@@ -848,7 +858,7 @@ function BattleBoard({
                 >
                   <div className="hand-card-inner">
                     <div className="battle-card-art hand-card-art" aria-hidden="true">
-                      {card.family === 'daily' ? '💧' : card.family === 'side' ? '🗡️' : '👑'}
+                      🗡️
                     </div>
                     <div className="hand-card-copy">
                       <div className="battle-card-topline">
@@ -882,7 +892,7 @@ export default function App() {
   const [dailyTitle, setDailyTitle] = useState('');
   const [dailyXp, setDailyXp] = useState('10');
   const [dailyCards, setDailyCards] = useState<DraftCard[]>([createDraftCard('3')]);
-  const [dailyMonsterArt, setDailyMonsterArt] = useState('👹');
+  const [dailyMonsterArt, setDailyMonsterArt] = useState('🗡️');
   const [dailyMonsterHp, setDailyMonsterHp] = useState('10');
   const [dailyRecurrence, setDailyRecurrence] = useState<Recurrence>('daily');
   const [dailyDeadlineType, setDailyDeadlineType] = useState<DeadlineType>('endOfDay');
@@ -891,7 +901,7 @@ export default function App() {
   const [editingDailyTitle, setEditingDailyTitle] = useState('');
   const [editingDailyXp, setEditingDailyXp] = useState('10');
   const [editingDailyCards, setEditingDailyCards] = useState<DraftCard[]>([createDraftCard('3')]);
-  const [editingDailyMonsterArt, setEditingDailyMonsterArt] = useState('👹');
+  const [editingDailyMonsterArt, setEditingDailyMonsterArt] = useState('🗡️');
   const [editingDailyMonsterHp, setEditingDailyMonsterHp] = useState('10');
   const [editingDailyRecurrence, setEditingDailyRecurrence] = useState<Recurrence>('daily');
   const [editingDailyDeadlineType, setEditingDailyDeadlineType] = useState<DeadlineType>('endOfDay');
@@ -927,7 +937,7 @@ export default function App() {
   const [mainReward, setMainReward] = useState('');
   const [mainMonsterMode, setMainMonsterMode] = useState<'auto' | 'custom'>('auto');
   const [mainMonsterName, setMainMonsterName] = useState('');
-  const [mainMonsterArt, setMainMonsterArt] = useState('👑');
+  const [mainMonsterArt, setMainMonsterArt] = useState('🗡️');
   const [mainMonsterHp, setMainMonsterHp] = useState('20');
   const [mainCards, setMainCards] = useState<DraftCard[]>([createDraftCard('10')]);
   const [mainRecurrence, setMainRecurrence] = useState<Recurrence>('none');
@@ -938,7 +948,7 @@ export default function App() {
   const [editingMainReward, setEditingMainReward] = useState('');
   const [editingMainMonsterMode, setEditingMainMonsterMode] = useState<'auto' | 'custom'>('auto');
   const [editingMainMonsterName, setEditingMainMonsterName] = useState('');
-  const [editingMainMonsterArt, setEditingMainMonsterArt] = useState('👑');
+  const [editingMainMonsterArt, setEditingMainMonsterArt] = useState('🗡️');
   const [editingMainMonsterHp, setEditingMainMonsterHp] = useState('20');
   const [editingMainCards, setEditingMainCards] = useState<DraftCard[]>([createDraftCard('10')]);
   const [editingMainRecurrence, setEditingMainRecurrence] = useState<Recurrence>('none');
@@ -1089,7 +1099,7 @@ export default function App() {
     setDailyTitle('');
     setDailyXp('10');
     setDailyCards([createDraftCard('3')]);
-    setDailyMonsterArt('👹');
+    setDailyMonsterArt('🗡️');
     setDailyMonsterHp('10');
     setDailyRecurrence('daily');
     setDailyDeadlineType('endOfDay');
@@ -1211,7 +1221,7 @@ export default function App() {
     setMainReward('');
     setMainMonsterMode('auto');
     setMainMonsterName('');
-    setMainMonsterArt('👑');
+    setMainMonsterArt('🗡️');
     setMainMonsterHp('20');
     setMainCards([createDraftCard('10')]);
     setMainRecurrence('none');
@@ -1224,7 +1234,7 @@ export default function App() {
     setEditingDailyTitle(quest.title);
     setEditingDailyXp(String(quest.xp));
     setEditingDailyCards(objectivesToDraftCards(quest.cards));
-    setEditingDailyMonsterArt(quest.monsterArt ?? '👹');
+    setEditingDailyMonsterArt(quest.monsterArt ?? '🗡️');
     setEditingDailyMonsterHp(String(quest.monsterHp ?? quest.cards.reduce((total, card) => total + card.cardPower, 0)));
     setEditingDailyRecurrence(quest.recurrence);
     setEditingDailyDeadlineType(quest.deadlineType);
@@ -1363,7 +1373,7 @@ export default function App() {
     setEditingMainReward(quest.reward);
     setEditingMainMonsterMode(quest.monsterName ? 'custom' : 'auto');
     setEditingMainMonsterName(quest.monsterName ?? '');
-    setEditingMainMonsterArt(quest.monsterArt ?? '👑');
+    setEditingMainMonsterArt(quest.monsterArt ?? '🗡️');
     setEditingMainMonsterHp(String(quest.monsterHp ?? quest.objectives.reduce((total, objective) => total + objective.cardPower, 0)));
     setEditingMainCards(objectivesToDraftCards(quest.objectives));
     setEditingMainRecurrence(quest.recurrence);
@@ -1812,7 +1822,7 @@ export default function App() {
             <input onChange={(event) => setDailyTitle(event.target.value)} placeholder="Routine title" value={dailyTitle} />
             <input min="0" onChange={(event) => setDailyXp(event.target.value)} placeholder="XP reward" type="number" value={dailyXp} />
             <div className="form-grid">
-              <input onChange={(event) => setDailyMonsterArt(event.target.value)} placeholder="Monster look (emoji/icon)" value={dailyMonsterArt} />
+              <input onChange={(event) => setDailyMonsterArt(event.target.value)} placeholder="Monster look (emoji or image URL)" value={dailyMonsterArt} />
               <input min="1" onChange={(event) => setDailyMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={dailyMonsterHp} />
             </div>
             <div className="card-builder" aria-label="Daily quest cards">
@@ -1875,7 +1885,7 @@ export default function App() {
             </div>
             <input onChange={(event) => setSideReward(event.target.value)} placeholder="Reward for completion" value={sideReward} />
             <div className="form-grid">
-              <input onChange={(event) => setSideMonsterArt(event.target.value)} placeholder="Monster look (emoji/icon)" value={sideMonsterArt} />
+              <input onChange={(event) => setSideMonsterArt(event.target.value)} placeholder="Monster look (emoji or image URL)" value={sideMonsterArt} />
               <input min="1" onChange={(event) => setSideMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={sideMonsterHp} />
             </div>
             <div className="form-grid">
@@ -1955,7 +1965,7 @@ export default function App() {
             <input onChange={(event) => setMainTitle(event.target.value)} placeholder="Main quest title" value={mainTitle} />
             <input onChange={(event) => setMainReward(event.target.value)} placeholder="Reward for completion" value={mainReward} />
             <div className="form-grid">
-              <input onChange={(event) => setMainMonsterArt(event.target.value)} placeholder="Monster look (emoji/icon)" value={mainMonsterArt} />
+              <input onChange={(event) => setMainMonsterArt(event.target.value)} placeholder="Monster look (emoji or image URL)" value={mainMonsterArt} />
               <input min="1" onChange={(event) => setMainMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={mainMonsterHp} />
             </div>
             <div className="form-grid">
@@ -2079,7 +2089,7 @@ export default function App() {
                   <input onChange={(event) => setEditingDailyTitle(event.target.value)} placeholder="Routine title" value={editingDailyTitle} />
                   <input min="0" onChange={(event) => setEditingDailyXp(event.target.value)} placeholder="XP reward" type="number" value={editingDailyXp} />
                   <div className="form-grid">
-                    <input onChange={(event) => setEditingDailyMonsterArt(event.target.value)} placeholder="Monster look (emoji/icon)" value={editingDailyMonsterArt} />
+                    <input onChange={(event) => setEditingDailyMonsterArt(event.target.value)} placeholder="Monster look (emoji or image URL)" value={editingDailyMonsterArt} />
                     <input min="1" onChange={(event) => setEditingDailyMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={editingDailyMonsterHp} />
                   </div>
                   <div className="card-builder" aria-label="Edit daily quest cards">
@@ -2194,7 +2204,7 @@ export default function App() {
                     </div>
                     <input onChange={(event) => setEditingSideReward(event.target.value)} placeholder="Reward for completion" value={editingSideReward} />
                     <div className="form-grid">
-                      <input onChange={(event) => setEditingSideMonsterArt(event.target.value)} placeholder="Monster look (emoji/icon)" value={editingSideMonsterArt} />
+                      <input onChange={(event) => setEditingSideMonsterArt(event.target.value)} placeholder="Monster look (emoji or image URL)" value={editingSideMonsterArt} />
                       <input min="1" onChange={(event) => setEditingSideMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={editingSideMonsterHp} />
                     </div>
                     <div className="form-grid">
@@ -2325,7 +2335,7 @@ export default function App() {
                     <input onChange={(event) => setEditingMainTitle(event.target.value)} placeholder="Main quest title" value={editingMainTitle} />
                     <input onChange={(event) => setEditingMainReward(event.target.value)} placeholder="Reward for completion" value={editingMainReward} />
                     <div className="form-grid">
-                      <input onChange={(event) => setEditingMainMonsterArt(event.target.value)} placeholder="Monster look (emoji/icon)" value={editingMainMonsterArt} />
+                      <input onChange={(event) => setEditingMainMonsterArt(event.target.value)} placeholder="Monster look (emoji or image URL)" value={editingMainMonsterArt} />
                       <input min="1" onChange={(event) => setEditingMainMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={editingMainMonsterHp} />
                     </div>
                     <div className="form-grid">

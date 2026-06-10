@@ -878,6 +878,14 @@ h1 {
   line-height: 1;
 }
 
+.monster-boss-image {
+  width: clamp(88px, 24vw, 148px);
+  height: clamp(88px, 24vw, 148px);
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+
 .monster-mood {
   margin-top: 8px;
   color: #d8e3eb;
@@ -979,10 +987,10 @@ h1 {
 
 .field-row {
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   justify-content: center;
   gap: 14px;
-  min-height: 190px;
+  min-height: 120px;
   padding: 28px 18px 12px;
   border-radius: 34px;
   background:
@@ -1001,14 +1009,14 @@ h1 {
 
 .battle-card,
 .battle-empty {
-  border-radius: 24px;
-  padding: 18px;
+  border-radius: 20px;
+  padding: 14px 16px;
 }
 
 .battle-card {
   position: relative;
   overflow: hidden;
-  min-height: 220px;
+  min-height: 0;
   border: 1px solid rgba(232, 206, 146, 0.42);
   background:
     radial-gradient(circle at top left, rgba(255, 233, 182, 0.18), transparent 24%),
@@ -1018,7 +1026,7 @@ h1 {
   text-align: left;
   box-shadow:
     inset 0 0 0 1px rgba(255, 237, 201, 0.08),
-    0 20px 36px rgba(3, 8, 13, 0.24);
+    0 14px 26px rgba(3, 8, 13, 0.2);
   transition:
     transform 180ms ease,
     box-shadow 180ms ease,
@@ -1026,10 +1034,10 @@ h1 {
 }
 
 .battle-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
   box-shadow:
     inset 0 0 0 1px rgba(255, 237, 201, 0.1),
-    0 24px 42px rgba(3, 8, 13, 0.28);
+    0 18px 30px rgba(3, 8, 13, 0.24);
 }
 
 .battle-card.is-played {
@@ -1044,13 +1052,10 @@ h1 {
 }
 
 .field-card {
-  width: min(240px, 100%);
-  flex: 0 0 240px;
-  min-height: 250px;
-  transform:
-    translateY(calc(var(--field-index, 0) * 6px - 20px))
-    perspective(900px)
-    rotateX(6deg);
+  width: min(280px, 100%);
+  flex: 0 1 280px;
+  min-height: 0;
+  transform: translateY(calc(var(--field-index, 0) * 4px));
 }
 
 .field-card.just-played {
@@ -1075,8 +1080,8 @@ h1 {
 .battle-card strong,
 .battle-empty strong {
   display: block;
-  margin-top: 12px;
-  font-size: 1.08rem;
+  margin-top: 6px;
+  font-size: 1rem;
 }
 
 .battle-card strong {
@@ -1084,10 +1089,10 @@ h1 {
 }
 
 .battle-card-art {
-  margin-top: 16px;
-  font-size: 2.4rem;
+  margin-top: 6px;
+  font-size: 1.4rem;
   line-height: 1;
-  text-align: center;
+  text-align: left;
 }
 
 .battle-card small {
@@ -1096,9 +1101,9 @@ h1 {
 }
 
 .battle-card-action {
-  margin-top: 18px;
+  margin-top: 8px;
   color: #fff7dc;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 800;
 }
 
@@ -1158,32 +1163,25 @@ h1 {
 
 .hand-card {
   width: 100%;
-  max-width: 210px;
-  min-height: 124px;
-  flex: 0 0 210px;
-  padding: 14px 16px;
+  max-width: 280px;
+  min-height: 0;
+  flex: 0 0 280px;
+  padding: 12px 14px;
   scroll-snap-align: center;
   transform-origin: center bottom;
-  transform:
-    translateY(calc((var(--card-count, 1) - var(--card-index, 0) - 1) * 1px))
-    perspective(800px)
-    rotateX(10deg);
+  transform: translateY(calc((var(--card-count, 1) - var(--card-index, 0) - 1) * 1px));
 }
 
 .hand-card:hover {
   z-index: 5;
-  transform:
-    translateY(-10px)
-    perspective(800px)
-    rotateX(0deg)
-    scale(1.04);
+  transform: translateY(-6px) scale(1.02);
 }
 
 .hand-card-inner {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
+  grid-template-columns: 36px minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .hand-card-copy {
@@ -1195,8 +1193,8 @@ h1 {
 }
 
 .hand-card-copy strong {
-  margin-top: 8px;
-  font-size: 0.95rem;
+  margin-top: 4px;
+  font-size: 0.9rem;
 }
 
 .hand-card-copy small {
@@ -1207,7 +1205,7 @@ h1 {
 
 .hand-card-art {
   margin-top: 0;
-  font-size: 2rem;
+  font-size: 1.25rem;
 }
 
 .hand-card .battle-card-action {
