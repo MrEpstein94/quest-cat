@@ -18,6 +18,7 @@ type DailyQuest = {
   title: string;
   xp: number;
   cards: Objective[];
+  monsterName?: string;
   monsterArt?: string;
   monsterHp?: number;
   recurrence: Recurrence;
@@ -444,10 +445,15 @@ function titleize(value: string) {
   return value.replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
-function autoGenerateMonsterName(kind: 'side' | 'main', title: string) {
+function autoGenerateMonsterName(kind: 'daily' | 'side' | 'main', title: string) {
   const words = slugWords(title);
   const anchor = words[0] ?? 'quest';
   const tail = words[words.length - 1] ?? 'trial';
+  const dailyTemplates = [
+    `The ${titleize(anchor)} Hydra`,
+    `${titleize(anchor)} Habit Fang`,
+    `The ${titleize(tail)} Drip Beast`,
+  ];
   const sideTemplates = [
     `The ${titleize(anchor)} Bandit`,
     `${titleize(anchor)} Warden`,
@@ -458,7 +464,7 @@ function autoGenerateMonsterName(kind: 'side' | 'main', title: string) {
     `The ${titleize(tail)} Titan`,
     `${titleize(anchor)} Overlord`,
   ];
-  const templates = kind === 'side' ? sideTemplates : mainTemplates;
+  const templates = kind === 'daily' ? dailyTemplates : kind === 'side' ? sideTemplates : mainTemplates;
   const hash = words.join('').length % templates.length;
 
   return templates[hash];
@@ -533,6 +539,7 @@ function normalizeDailyQuest(
     title: quest.title ?? 'New daily routine',
     xp: Number(quest.xp ?? 10),
     cards,
+    monsterName: quest.monsterName?.trim() || undefined,
     monsterArt: quest.monsterArt?.trim() || undefined,
     monsterHp: normalizeMonsterHp(quest.monsterHp, cards.reduce((total, card) => total + card.cardPower, 0)),
     recurrence: quest.recurrence ?? 'daily',
@@ -724,7 +731,7 @@ function buildBattleState(
       title: quest.title,
       subtitle: `Daily deck worth +${quest.xp} XP.`,
       monsterArt: normalizeMonsterArt(quest.monsterArt, '🗡️'),
-      monsterName: currentHp === 0 ? 'Hydra of Habits Defeated' : 'Hydra of Habits',
+      monsterName: quest.monsterName || autoGenerateMonsterName('daily', quest.title),
       monsterMood: currentHp === 0 ? 'Collapsed under your routine combo.' : 'Still feeding on skipped habits.',
       totalHp: Math.max(totalHp, 1),
       currentHp,
@@ -955,6 +962,8 @@ export default function App() {
   const [dailyTitle, setDailyTitle] = useState('');
   const [dailyXp, setDailyXp] = useState('10');
   const [dailyCards, setDailyCards] = useState<DraftCard[]>([createDraftCard('3')]);
+  const [dailyMonsterMode, setDailyMonsterMode] = useState<'auto' | 'custom'>('auto');
+  const [dailyMonsterName, setDailyMonsterName] = useState('');
   const [dailyMonsterArt, setDailyMonsterArt] = useState('🗡️');
   const [dailyMonsterHp, setDailyMonsterHp] = useState('10');
   const [dailyRecurrence, setDailyRecurrence] = useState<Recurrence>('daily');
@@ -964,6 +973,8 @@ export default function App() {
   const [editingDailyTitle, setEditingDailyTitle] = useState('');
   const [editingDailyXp, setEditingDailyXp] = useState('10');
   const [editingDailyCards, setEditingDailyCards] = useState<DraftCard[]>([createDraftCard('3')]);
+  const [editingDailyMonsterMode, setEditingDailyMonsterMode] = useState<'auto' | 'custom'>('auto');
+  const [editingDailyMonsterName, setEditingDailyMonsterName] = useState('');
   const [editingDailyMonsterArt, setEditingDailyMonsterArt] = useState('🗡️');
   const [editingDailyMonsterHp, setEditingDailyMonsterHp] = useState('10');
   const [editingDailyRecurrence, setEditingDailyRecurrence] = useState<Recurrence>('daily');
@@ -1254,6 +1265,7 @@ export default function App() {
         title,
         xp,
         cards,
+        monsterName: dailyMonsterMode === 'custom' ? dailyMonsterName.trim() || undefined : undefined,
         monsterArt: dailyMonsterArt.trim() || undefined,
         monsterHp,
         recurrence: dailyRecurrence,
@@ -1265,6 +1277,8 @@ export default function App() {
     setDailyTitle('');
     setDailyXp('10');
     setDailyCards([createDraftCard('3')]);
+    setDailyMonsterMode('auto');
+    setDailyMonsterName('');
     setDailyMonsterArt('🗡️');
     setDailyMonsterHp('10');
     setDailyRecurrence('daily');
@@ -1402,6 +1416,8 @@ export default function App() {
     setEditingDailyTitle(quest.title);
     setEditingDailyXp(String(quest.xp));
     setEditingDailyCards(objectivesToDraftCards(quest.cards));
+    setEditingDailyMonsterMode(quest.monsterName ? 'custom' : 'auto');
+    setEditingDailyMonsterName(quest.monsterName ?? '');
     setEditingDailyMonsterArt(quest.monsterArt ?? '🗡️');
     setEditingDailyMonsterHp(String(quest.monsterHp ?? quest.cards.reduce((total, card) => total + card.cardPower, 0)));
     setEditingDailyRecurrence(quest.recurrence);
@@ -1450,6 +1466,7 @@ export default function App() {
           title,
           xp,
           cards: cards.map((card, index) => ({ ...card, done: index < nextPlayedCount })),
+          monsterName: editingDailyMonsterMode === 'custom' ? editingDailyMonsterName.trim() || undefined : undefined,
           monsterArt: editingDailyMonsterArt.trim() || undefined,
           monsterHp,
           recurrence: editingDailyRecurrence,
@@ -1992,13 +2009,34 @@ export default function App() {
         {builderMode === 'daily' ? (
           <form className="quest-form" onSubmit={addDailyQuest}>
             <h3>Add Daily Card Deck</h3>
-            <p className="form-note">Create a repeatable routine deck with named cards you can add and edit.</p>
+            <p className="form-note">Create a repeatable routine deck with named cards, a monster look you choose, and either a custom monster name or an auto-generated one.</p>
             <input onChange={(event) => setDailyTitle(event.target.value)} placeholder="Routine title" value={dailyTitle} />
             <input min="0" onChange={(event) => setDailyXp(event.target.value)} placeholder="XP reward" type="number" value={dailyXp} />
             <div className="form-grid">
               <input onChange={(event) => setDailyMonsterArt(event.target.value)} placeholder="Monster look (emoji or image URL)" value={dailyMonsterArt} />
               <input min="1" onChange={(event) => setDailyMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={dailyMonsterHp} />
             </div>
+            <div className="monster-mode-row" role="group" aria-label="Daily monster naming">
+              <button
+                className={`ghost-button ${dailyMonsterMode === 'auto' ? 'is-selected' : ''}`}
+                onClick={() => setDailyMonsterMode('auto')}
+                type="button"
+              >
+                Auto-generate Name
+              </button>
+              <button
+                className={`ghost-button ${dailyMonsterMode === 'custom' ? 'is-selected' : ''}`}
+                onClick={() => setDailyMonsterMode('custom')}
+                type="button"
+              >
+                Name Monster Yourself
+              </button>
+            </div>
+            {dailyMonsterMode === 'custom' ? (
+              <input onChange={(event) => setDailyMonsterName(event.target.value)} placeholder="Monster name" value={dailyMonsterName} />
+            ) : (
+              <p className="form-helper">Monster preview: {autoGenerateMonsterName('daily', dailyTitle || 'daily quest')}</p>
+            )}
             <div className="card-builder" aria-label="Daily quest cards">
               {dailyCards.map((card, index) => (
                 <div className="card-builder-row" key={card.id}>
@@ -2281,6 +2319,27 @@ export default function App() {
                     <input onChange={(event) => setEditingDailyMonsterArt(event.target.value)} placeholder="Monster look (emoji or image URL)" value={editingDailyMonsterArt} />
                     <input min="1" onChange={(event) => setEditingDailyMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={editingDailyMonsterHp} />
                   </div>
+                  <div className="monster-mode-row" role="group" aria-label="Edit daily monster naming">
+                    <button
+                      className={`ghost-button ${editingDailyMonsterMode === 'auto' ? 'is-selected' : ''}`}
+                      onClick={() => setEditingDailyMonsterMode('auto')}
+                      type="button"
+                    >
+                      Auto-generate Name
+                    </button>
+                    <button
+                      className={`ghost-button ${editingDailyMonsterMode === 'custom' ? 'is-selected' : ''}`}
+                      onClick={() => setEditingDailyMonsterMode('custom')}
+                      type="button"
+                    >
+                      Name Monster Yourself
+                    </button>
+                  </div>
+                  {editingDailyMonsterMode === 'custom' ? (
+                    <input onChange={(event) => setEditingDailyMonsterName(event.target.value)} placeholder="Monster name" value={editingDailyMonsterName} />
+                  ) : (
+                    <p className="form-helper">Monster preview: {autoGenerateMonsterName('daily', editingDailyTitle || 'daily quest')}</p>
+                  )}
                   <div className="card-builder" aria-label="Edit daily quest cards">
                     {editingDailyCards.map((card, index) => (
                       <div className="card-builder-row" key={card.id}>
