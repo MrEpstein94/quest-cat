@@ -1301,12 +1301,19 @@ export default function App() {
     setter((current) => [...current, createDraftCard(defaultPower)]);
   }
 
-  function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCard[]>>, defaultPower: string) {
-    setter((current) => {
-      const nextCards = current.filter((card) => card.id !== cardId);
-      return nextCards.length > 0 ? nextCards : [createDraftCard(defaultPower)];
-    });
-  }
+function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCard[]>>, defaultPower: string) {
+  setter((current) => {
+    const nextCards = current.filter((card) => card.id !== cardId);
+    return nextCards.length > 0 ? nextCards : [createDraftCard(defaultPower)];
+  });
+}
+
+function preserveObjectiveProgress(nextObjectives: Objective[], currentObjectives: Objective[]) {
+  return nextObjectives.map((objective, index) => ({
+    ...objective,
+    done: currentObjectives[index]?.done ?? false,
+  }));
+}
 
   function addSideQuest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1530,23 +1537,28 @@ export default function App() {
     setSideQuests((current) =>
       current.map((quest) =>
         quest.id === editingSideId
-          ? {
-              ...quest,
-              title,
-              xp,
-              difficulty: editingSideDifficulty.trim() || 'Custom',
-              reward,
-              monsterName: editingSideMonsterMode === 'custom' ? editingSideMonsterName.trim() || undefined : undefined,
-              monsterArt: editingSideMonsterArt.trim() || undefined,
-              monsterHp,
-              objectives,
-              done: false,
-              completedAt: undefined,
-              recurrence: editingSideRecurrence,
-              deadlineType: editingSideDeadlineType,
-              deadlineAt: normalizeDeadlineAt(editingSideDeadlineType, editingSideDeadlineAt),
-              cycleStartedAt: quest.cycleStartedAt ?? new Date().toISOString(),
-            }
+          ? (() => {
+              const nextObjectives = preserveObjectiveProgress(objectives, quest.objectives);
+              const nextDone = nextObjectives.length > 0 && nextObjectives.every((objective) => objective.done);
+
+              return {
+                ...quest,
+                title,
+                xp,
+                difficulty: editingSideDifficulty.trim() || 'Custom',
+                reward,
+                monsterName: editingSideMonsterMode === 'custom' ? editingSideMonsterName.trim() || undefined : undefined,
+                monsterArt: editingSideMonsterArt.trim() || undefined,
+                monsterHp,
+                objectives: nextObjectives,
+                done: nextDone,
+                completedAt: nextDone ? quest.completedAt ?? new Date().toISOString() : undefined,
+                recurrence: editingSideRecurrence,
+                deadlineType: editingSideDeadlineType,
+                deadlineAt: normalizeDeadlineAt(editingSideDeadlineType, editingSideDeadlineAt),
+                cycleStartedAt: quest.cycleStartedAt ?? new Date().toISOString(),
+              };
+            })()
           : quest,
       ),
     );
@@ -1598,21 +1610,26 @@ export default function App() {
     setMainQuests((current) =>
       current.map((quest) =>
         quest.id === editingMainId
-          ? {
-              ...quest,
-              title,
-              reward,
-              monsterName: editingMainMonsterMode === 'custom' ? editingMainMonsterName.trim() || undefined : undefined,
-              monsterArt: editingMainMonsterArt.trim() || undefined,
-              monsterHp,
-              objectives,
-              done: false,
-              completedAt: undefined,
-              recurrence: editingMainRecurrence,
-              deadlineType: editingMainDeadlineType,
-              deadlineAt: normalizeDeadlineAt(editingMainDeadlineType, editingMainDeadlineAt),
-              cycleStartedAt: quest.cycleStartedAt ?? new Date().toISOString(),
-            }
+          ? (() => {
+              const nextObjectives = preserveObjectiveProgress(objectives, quest.objectives);
+              const nextDone = nextObjectives.length > 0 && nextObjectives.every((objective) => objective.done);
+
+              return {
+                ...quest,
+                title,
+                reward,
+                monsterName: editingMainMonsterMode === 'custom' ? editingMainMonsterName.trim() || undefined : undefined,
+                monsterArt: editingMainMonsterArt.trim() || undefined,
+                monsterHp,
+                objectives: nextObjectives,
+                done: nextDone,
+                completedAt: nextDone ? quest.completedAt ?? new Date().toISOString() : undefined,
+                recurrence: editingMainRecurrence,
+                deadlineType: editingMainDeadlineType,
+                deadlineAt: normalizeDeadlineAt(editingMainDeadlineType, editingMainDeadlineAt),
+                cycleStartedAt: quest.cycleStartedAt ?? new Date().toISOString(),
+              };
+            })()
           : quest,
       ),
     );
@@ -2313,6 +2330,7 @@ export default function App() {
               {editingDailyId === quest.id ? (
                 <form className="quest-form edit-form" onSubmit={saveDailyQuestEdit}>
                   <h3>Edit Daily Deck</h3>
+                  <p className="form-note">Rename any card below or add new cards with their own titles.</p>
                   <input onChange={(event) => setEditingDailyTitle(event.target.value)} placeholder="Routine title" value={editingDailyTitle} />
                   <input min="0" onChange={(event) => setEditingDailyXp(event.target.value)} placeholder="XP reward" type="number" value={editingDailyXp} />
                   <div className="form-grid">
@@ -2366,7 +2384,7 @@ export default function App() {
                       </div>
                     ))}
                     <button className="ghost-button add-card-button" onClick={() => addDraftCard(setEditingDailyCards, '3')} type="button">
-                      Add Card
+                      Add Another Card
                     </button>
                   </div>
                   <div className="form-grid">
@@ -2403,7 +2421,7 @@ export default function App() {
                   Open Battle
                 </button>
                 <button className="ghost-button" onClick={() => startEditingDailyQuest(quest)} type="button">
-                  Edit
+                  Edit Quest + Cards
                 </button>
                 <button className="ghost-button danger-button" onClick={() => deleteDailyQuest(quest.id)} type="button">
                   Delete
@@ -2450,6 +2468,7 @@ export default function App() {
                 {editingSideId === quest.id ? (
                   <form className="quest-form edit-form" onSubmit={saveSideQuestEdit}>
                     <h3>Edit Side Quest</h3>
+                    <p className="form-note">Rename existing cards below or add new cards with different titles without losing your current card progress.</p>
                     <input onChange={(event) => setEditingSideTitle(event.target.value)} placeholder="Quest title" value={editingSideTitle} />
                     <div className="form-grid">
                       <input min="0" onChange={(event) => setEditingSideXp(event.target.value)} placeholder="XP reward" type="number" value={editingSideXp} />
@@ -2526,7 +2545,7 @@ export default function App() {
                         </div>
                       ))}
                       <button className="ghost-button add-card-button" onClick={() => addDraftCard(setEditingSideCards, '6')} type="button">
-                        Add Card
+                        Add Another Card
                       </button>
                     </div>
                     <div className="edit-form-actions">
@@ -2544,7 +2563,7 @@ export default function App() {
                     Open Battle
                   </button>
                   <button className="ghost-button" onClick={() => startEditingSideQuest(quest)} type="button">
-                    Edit
+                    Edit Quest + Cards
                   </button>
                   <button className="ghost-button danger-button" onClick={() => deleteQuest(quest.id, 'side', setSideQuests)} type="button">
                     Delete
@@ -2590,6 +2609,7 @@ export default function App() {
                 {editingMainId === quest.id ? (
                   <form className="quest-form edit-form" onSubmit={saveMainQuestEdit}>
                     <h3>Edit Main Quest</h3>
+                    <p className="form-note">Rename existing cards below or add new cards with different titles without losing your current card progress.</p>
                     <input onChange={(event) => setEditingMainTitle(event.target.value)} placeholder="Main quest title" value={editingMainTitle} />
                     <input onChange={(event) => setEditingMainReward(event.target.value)} placeholder="Reward for completion" value={editingMainReward} />
                     <div className="form-grid">
@@ -2662,7 +2682,7 @@ export default function App() {
                         </div>
                       ))}
                       <button className="ghost-button add-card-button" onClick={() => addDraftCard(setEditingMainCards, '10')} type="button">
-                        Add Card
+                        Add Another Card
                       </button>
                     </div>
                     <div className="edit-form-actions">
@@ -2680,7 +2700,7 @@ export default function App() {
                     Open Battle
                   </button>
                   <button className="ghost-button" onClick={() => startEditingMainQuest(quest)} type="button">
-                    Edit
+                    Edit Quest + Cards
                   </button>
                   <button className="ghost-button danger-button" onClick={() => deleteQuest(quest.id, 'main', setMainQuests)} type="button">
                     Delete
