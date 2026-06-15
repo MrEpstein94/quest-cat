@@ -766,6 +766,14 @@ h1 {
   align-items: center;
 }
 
+.card-builder-row > :first-child {
+  grid-column: 1 / -1;
+}
+
+.card-builder-row .card-row-button {
+  align-self: stretch;
+}
+
 .card-row-button,
 .add-card-button {
   width: auto;
