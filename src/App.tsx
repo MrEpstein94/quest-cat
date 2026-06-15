@@ -1640,8 +1640,8 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
               </div>
               {editingDailyId === quest.id ? (
                 <form className="quest-form edit-form" onSubmit={saveDailyQuestEdit}>
-                  <h3>Edit Daily Deck</h3>
-                  <p className="form-note">Rename any card below or add new cards with their own titles.</p>
+                  <h3>Rename Daily Cards</h3>
+                  <p className="form-note">Edit card names below. You can also add more cards or change the rest of the deck settings here.</p>
                   <input onChange={(event) => setEditingDailyTitle(event.target.value)} placeholder="Routine title" value={editingDailyTitle} />
                   <input min="0" onChange={(event) => setEditingDailyXp(event.target.value)} placeholder="XP reward" type="number" value={editingDailyXp} />
                   <div className="form-grid">
@@ -1731,8 +1731,8 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                 <button className="ghost-button" onClick={() => setSelectedBoard({ kind: 'daily', questId: quest.id })} type="button">
                   Open Battle
                 </button>
-                <button className="ghost-button" onClick={() => startEditingDailyQuest(quest)} type="button">
-                  Edit Quest + Cards
+                <button className="ghost-button card-rename-button" onClick={() => startEditingDailyQuest(quest)} type="button">
+                  Rename Cards
                 </button>
                 <button className="ghost-button danger-button" onClick={() => deleteDailyQuest(quest.id)} type="button">
                   Delete
@@ -1778,8 +1778,8 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                 </div>
                 {editingSideId === quest.id ? (
                   <form className="quest-form edit-form" onSubmit={saveSideQuestEdit}>
-                    <h3>Edit Side Quest</h3>
-                    <p className="form-note">Rename existing cards below or add new cards with different titles without losing your current card progress.</p>
+                    <h3>Rename Side Quest Cards</h3>
+                    <p className="form-note">Edit card names below. You can also add more cards or change the rest of the quest settings here without losing current progress.</p>
                     <input onChange={(event) => setEditingSideTitle(event.target.value)} placeholder="Quest title" value={editingSideTitle} />
                     <div className="form-grid">
                       <input min="0" onChange={(event) => setEditingSideXp(event.target.value)} placeholder="XP reward" type="number" value={editingSideXp} />
@@ -1873,8 +1873,8 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                   <button className="ghost-button" onClick={() => setSelectedBoard({ kind: 'side', questId: quest.id })} type="button">
                     Open Battle
                   </button>
-                  <button className="ghost-button" onClick={() => startEditingSideQuest(quest)} type="button">
-                    Edit Quest + Cards
+                  <button className="ghost-button card-rename-button" onClick={() => startEditingSideQuest(quest)} type="button">
+                    Rename Cards
                   </button>
                   <button className="ghost-button danger-button" onClick={() => deleteQuest(quest.id, 'side', setSideQuests)} type="button">
                     Delete
@@ -1919,8 +1919,8 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                 </div>
                 {editingMainId === quest.id ? (
                   <form className="quest-form edit-form" onSubmit={saveMainQuestEdit}>
-                    <h3>Edit Main Quest</h3>
-                    <p className="form-note">Rename existing cards below or add new cards with different titles without losing your current card progress.</p>
+                    <h3>Rename Main Quest Cards</h3>
+                    <p className="form-note">Edit card names below. You can also add more cards or change the rest of the quest settings here without losing current progress.</p>
                     <input onChange={(event) => setEditingMainTitle(event.target.value)} placeholder="Main quest title" value={editingMainTitle} />
                     <input onChange={(event) => setEditingMainReward(event.target.value)} placeholder="Reward for completion" value={editingMainReward} />
                     <div className="form-grid">
@@ -2010,8 +2010,8 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                   <button className="ghost-button" onClick={() => setSelectedBoard({ kind: 'main', questId: quest.id })} type="button">
                     Open Battle
                   </button>
-                  <button className="ghost-button" onClick={() => startEditingMainQuest(quest)} type="button">
-                    Edit Quest + Cards
+                  <button className="ghost-button card-rename-button" onClick={() => startEditingMainQuest(quest)} type="button">
+                    Rename Cards
                   </button>
                   <button className="ghost-button danger-button" onClick={() => deleteQuest(quest.id, 'main', setMainQuests)} type="button">
                     Delete

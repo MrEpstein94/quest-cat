@@ -657,6 +657,12 @@ h1 {
   color: #ffc6bf;
 }
 
+.card-rename-button {
+  color: #fff1cc;
+  border-color: rgba(246, 199, 110, 0.46);
+  background: rgba(245, 158, 11, 0.14);
+}
+
 .mini-stepper {
   display: inline-flex;
   align-items: center;
