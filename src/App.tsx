@@ -1,959 +1,56 @@
-import { useEffect, useMemo, useState, type CSSProperties, type Dispatch, type FormEvent, type SetStateAction } from 'react';
-
-type Recurrence = 'none' | 'daily' | 'weekly';
-type DeadlineType = 'none' | 'endOfDay' | 'endOfWeek' | 'custom';
-
-type QuestHistoryEntry = {
-  id: string;
-  family: 'daily' | 'side' | 'main';
-  questId: string;
-  title: string;
-  reward: string;
-  completedAt: string;
-  outcome: 'win' | 'loss';
-};
-
-type DailyQuest = {
-  id: string;
-  title: string;
-  xp: number;
-  cards: Objective[];
-  monsterName?: string;
-  monsterArt?: string;
-  monsterHp?: number;
-  recurrence: Recurrence;
-  deadlineType: DeadlineType;
-  deadlineAt?: string;
-  completedAt?: string;
-  cycleStartedAt?: string;
-};
-
-type Objective = {
-  id: string;
-  title: string;
-  symbol?: string;
-  cardPower: number;
-  done: boolean;
-};
-
-type DraftCard = {
-  id: string;
-  title: string;
-  symbol: string;
-  cardPower: string;
-};
-
-type Quest = {
-  id: string;
-  title: string;
-  xp?: number;
-  difficulty?: string;
-  monsterName?: string;
-  monsterArt?: string;
-  monsterHp?: number;
-  reward: string;
-  done: boolean;
-  objectives: Objective[];
-  recurrence: Recurrence;
-  deadlineType: DeadlineType;
-  deadlineAt?: string;
-  completedAt?: string;
-  cycleStartedAt?: string;
-};
-
-type BoardSelection =
-  | { kind: 'daily'; questId: string }
-  | { kind: 'side'; questId: string }
-  | { kind: 'main'; questId: string };
-
-type AppState = {
-  dailyQuests: DailyQuest[];
-  sideQuests: Quest[];
-  mainQuests: Quest[];
-  completionHistory: QuestHistoryEntry[];
-};
-
-type BattleCard = {
-  id: string;
-  originId: string;
-  title: string;
-  symbol: string;
-  cardPower: number;
-  played: boolean;
-  flavor: string;
-  family: 'daily' | 'side' | 'main';
-};
-
-type BattleState = {
-  title: string;
-  subtitle: string;
-  monsterName: string;
-  monsterArt: string;
-  monsterMood: string;
-  totalHp: number;
-  currentHp: number;
-  cards: BattleCard[];
-};
-
-const STORAGE_KEY = 'quest-cat-state-v8';
-
-const rankTitles = [
-  'Tiny Paws',
-  'Alley Scout',
-  'Whisker Squire',
-  'Moonlight Hunter',
-  'Legend Cat',
-];
-
-const baseXp = 180;
-
-const recurrenceOptions: Array<{ value: Recurrence; label: string }> = [
-  { value: 'none', label: 'No recurrence' },
-  { value: 'daily', label: 'Repeats daily' },
-  { value: 'weekly', label: 'Repeats weekly' },
-];
-
-const deadlineOptions: Array<{ value: DeadlineType; label: string }> = [
-  { value: 'none', label: 'No time limit' },
-  { value: 'endOfDay', label: 'End of day' },
-  { value: 'endOfWeek', label: 'End of week' },
-  { value: 'custom', label: 'Custom date' },
-];
-
-const defaultDailyQuests: DailyQuest[] = [
-  {
-    id: 'daily-1',
-    title: 'Drink water',
-    xp: 10,
-    cards: [
-      { id: 'daily-1-card-1', title: 'Morning glass', symbol: '💧', cardPower: 3, done: true },
-      { id: 'daily-1-card-2', title: 'Lunch refill', symbol: '🥤', cardPower: 3, done: true },
-      { id: 'daily-1-card-3', title: 'Afternoon glass', symbol: '💦', cardPower: 3, done: false },
-      { id: 'daily-1-card-4', title: 'Dinner refill', symbol: '🫗', cardPower: 3, done: false },
-      { id: 'daily-1-card-5', title: 'Night glass', symbol: '🌊', cardPower: 3, done: false },
-    ],
-    monsterArt: '🗡️',
-    monsterHp: 15,
-    recurrence: 'daily',
-    deadlineType: 'endOfDay',
-  },
-  {
-    id: 'daily-2',
-    title: 'Shower',
-    xp: 15,
-    cards: [{ id: 'daily-2-card-1', title: 'Take shower', symbol: '🚿', cardPower: 8, done: false }],
-    monsterArt: '🗡️',
-    monsterHp: 8,
-    recurrence: 'daily',
-    deadlineType: 'endOfDay',
-  },
-  {
-    id: 'daily-3',
-    title: 'Brush teeth',
-    xp: 12,
-    cards: [
-      { id: 'daily-3-card-1', title: 'Brush in morning', symbol: '🪥', cardPower: 4, done: true },
-      { id: 'daily-3-card-2', title: 'Brush at night', symbol: '✨', cardPower: 4, done: false },
-    ],
-    monsterArt: '🗡️',
-    monsterHp: 8,
-    recurrence: 'daily',
-    deadlineType: 'endOfDay',
-  },
-  {
-    id: 'daily-4',
-    title: '30 minute workout',
-    xp: 35,
-    cards: [{ id: 'daily-4-card-1', title: 'Workout session', symbol: '💪', cardPower: 12, done: false }],
-    monsterArt: '🗡️',
-    monsterHp: 12,
-    recurrence: 'daily',
-    deadlineType: 'endOfDay',
-  },
-];
-
-const defaultSideQuests: Quest[] = [
-  {
-    id: 'side-1',
-    title: 'Reply to one lingering text',
-    xp: 8,
-    difficulty: 'Quick win',
-    reward: '15 minutes guilt-free scrolling',
-    monsterArt: '🗡️',
-    monsterHp: 15,
-    done: false,
-    recurrence: 'none',
-    deadlineType: 'none',
-    objectives: [
-      { id: 'side-1-1', title: 'Pick one person', symbol: '🎯', cardPower: 4, done: false },
-      { id: 'side-1-2', title: 'Send the message', symbol: '💬', cardPower: 5, done: false },
-      { id: 'side-1-3', title: 'Archive the thread', symbol: '📦', cardPower: 6, done: false },
-    ],
-  },
-  {
-    id: 'side-2',
-    title: 'Tidy one small surface',
-    xp: 12,
-    difficulty: 'Easy',
-    reward: 'Fresh coffee after cleanup',
-    monsterArt: '🗡️',
-    monsterHp: 15,
-    done: false,
-    recurrence: 'none',
-    deadlineType: 'none',
-    objectives: [
-      { id: 'side-2-1', title: 'Choose one desk or counter', symbol: '📍', cardPower: 4, done: false },
-      { id: 'side-2-2', title: 'Throw away trash', symbol: '🗑️', cardPower: 5, done: false },
-      { id: 'side-2-3', title: 'Put items back', symbol: '📚', cardPower: 6, done: false },
-    ],
-  },
-  {
-    id: 'side-3',
-    title: 'Read 10 pages',
-    xp: 18,
-    difficulty: 'Medium',
-    reward: 'New sticker unlock',
-    monsterArt: '🗡️',
-    monsterHp: 21,
-    done: false,
-    recurrence: 'none',
-    deadlineType: 'none',
-    objectives: [
-      { id: 'side-3-1', title: 'Set a 15-minute timer', symbol: '⏱️', cardPower: 6, done: false },
-      { id: 'side-3-2', title: 'Read without phone', symbol: '📖', cardPower: 7, done: false },
-      { id: 'side-3-3', title: 'Log one takeaway', symbol: '📝', cardPower: 8, done: false },
-    ],
-  },
-];
-
-const defaultMainQuests: Quest[] = [
-  {
-    id: 'main-1',
-    title: 'Hit a 5-day streak',
-    reward: 'Weekend cafe visit',
-    monsterArt: '🗡️',
-    monsterHp: 18,
-    done: false,
-    recurrence: 'weekly',
-    deadlineType: 'endOfWeek',
-    objectives: [
-      { id: 'main-1-1', title: 'Finish 3 daily quests each day', symbol: '🔥', cardPower: 8, done: false },
-      { id: 'main-1-2', title: 'Keep the streak alive tonight', symbol: '🌙', cardPower: 10, done: false },
-    ],
-  },
-  {
-    id: 'main-2',
-    title: 'Launch Quest Cat v1',
-    reward: 'Buy a custom cat icon pack',
-    monsterArt: '🗡️',
-    monsterHp: 28,
-    done: false,
-    recurrence: 'none',
-    deadlineType: 'none',
-    objectives: [
-      { id: 'main-2-1', title: 'Finish quest list layout', symbol: '🧩', cardPower: 8, done: false },
-      { id: 'main-2-2', title: 'Define reward system', symbol: '🎁', cardPower: 9, done: false },
-      { id: 'main-2-3', title: 'Ship first installable build', symbol: '🚀', cardPower: 11, done: false },
-    ],
-  },
-];
-
-function createId(prefix: string) {
-  return `${prefix}-${crypto.randomUUID()}`;
-}
-
-function clampCount(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function isDailyQuestComplete(quest: DailyQuest) {
-  return quest.cards.length > 0 && quest.cards.every((card) => card.done);
-}
-
-function getDailyProgressLabel(quest: DailyQuest) {
-  const playedCount = quest.cards.filter((card) => card.done).length;
-  return `${playedCount} / ${quest.cards.length} cards played`;
-}
-
-function getDailyQuestPlayedCount(quest: DailyQuest) {
-  return quest.cards.filter((card) => card.done).length;
-}
-
-function normalizeMonsterArt(value: string | undefined, fallback: string) {
-  const trimmed = value?.trim();
-  return trimmed || fallback;
-}
-
-function isImageLike(value: string) {
-  return /^(https?:\/\/|data:image\/|\/)/i.test(value);
-}
-
-function normalizeMonsterHp(value: number | undefined, fallback: number) {
-  const numericValue = Number(value);
-  return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : fallback;
-}
-
-function getStartOfDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function getStartOfWeek(date: Date) {
-  const start = getStartOfDay(date);
-  const day = start.getDay();
-  start.setDate(start.getDate() - day);
-  return start;
-}
-
-function getEndOfDay(date: Date) {
-  const end = getStartOfDay(date);
-  end.setHours(23, 59, 59, 999);
-  return end;
-}
-
-function getEndOfWeek(date: Date) {
-  const end = getStartOfWeek(date);
-  end.setDate(end.getDate() + 6);
-  end.setHours(23, 59, 59, 999);
-  return end;
-}
-
-function resolveDeadlineAt(deadlineType: DeadlineType, deadlineAt?: string, now = new Date()) {
-  if (deadlineType === 'endOfDay') {
-    return getEndOfDay(now).toISOString();
-  }
-
-  if (deadlineType === 'endOfWeek') {
-    return getEndOfWeek(now).toISOString();
-  }
-
-  if (deadlineType === 'custom' && deadlineAt) {
-    const customDate = new Date(deadlineAt);
-
-    if (!Number.isNaN(customDate.getTime())) {
-      return getEndOfDay(customDate).toISOString();
-    }
-  }
-
-  return undefined;
-}
-
-function normalizeDeadlineAt(deadlineType: DeadlineType, deadlineAt?: string) {
-  return deadlineType === 'custom' ? deadlineAt || undefined : undefined;
-}
-
-function formatDeadline(deadlineType: DeadlineType, deadlineAt?: string) {
-  const resolvedDeadline = resolveDeadlineAt(deadlineType, deadlineAt);
-
-  if (!resolvedDeadline) {
-    return 'No time limit';
-  }
-
-  const date = new Date(resolvedDeadline);
-
-  if (deadlineType === 'endOfDay') {
-    return 'Due by end of day';
-  }
-
-  if (deadlineType === 'endOfWeek') {
-    return 'Due by end of week';
-  }
-
-  return `Due ${date.toLocaleDateString()}`;
-}
-
-function formatRecurrence(recurrence: Recurrence) {
-  if (recurrence === 'daily') {
-    return 'Repeats daily';
-  }
-
-  if (recurrence === 'weekly') {
-    return 'Repeats weekly';
-  }
-
-  return 'One-time quest';
-}
-
-function shouldResetRecurring(completedAt: string | undefined, recurrence: Recurrence, now = new Date()) {
-  if (!completedAt || recurrence === 'none') {
-    return false;
-  }
-
-  const completedDate = new Date(completedAt);
-
-  if (Number.isNaN(completedDate.getTime())) {
-    return false;
-  }
-
-  if (recurrence === 'daily') {
-    return getStartOfDay(now).getTime() > getStartOfDay(completedDate).getTime();
-  }
-
-  if (recurrence === 'weekly') {
-    return getStartOfWeek(now).getTime() > getStartOfWeek(completedDate).getTime();
-  }
-
-  return false;
-}
-
-function hasRecurringCycleAdvanced(cycleStartedAt: string | undefined, recurrence: Recurrence, now = new Date()) {
-  if (!cycleStartedAt || recurrence === 'none') {
-    return false;
-  }
-
-  const cycleStart = new Date(cycleStartedAt);
-
-  if (Number.isNaN(cycleStart.getTime())) {
-    return false;
-  }
-
-  if (recurrence === 'daily') {
-    return getStartOfDay(now).getTime() > getStartOfDay(cycleStart).getTime();
-  }
-
-  if (recurrence === 'weekly') {
-    return getStartOfWeek(now).getTime() > getStartOfWeek(cycleStart).getTime();
-  }
-
-  return false;
-}
-
-function getQuestCompletion(quest: Quest) {
-  const objectiveCount = quest.objectives.length;
-  const completedObjectives = quest.objectives.filter((objective) => objective.done).length;
-
-  return {
-    completedObjectives,
-    objectiveCount,
-    progressLabel:
-      objectiveCount === 0 ? 'No sub quests yet' : `${completedObjectives} / ${objectiveCount} cards played`,
-  };
-}
-
-function isQuestComplete(quest: Quest) {
-  return quest.objectives.length > 0 && quest.objectives.every((objective) => objective.done);
-}
-
-function slugWords(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean);
-}
-
-function titleize(value: string) {
-  return value.replace(/\b\w/g, (character) => character.toUpperCase());
-}
-
-function autoGenerateMonsterName(kind: 'daily' | 'side' | 'main', title: string) {
-  const words = slugWords(title);
-  const anchor = words[0] ?? 'quest';
-  const tail = words[words.length - 1] ?? 'trial';
-  const dailyTemplates = [
-    `The ${titleize(anchor)} Hydra`,
-    `${titleize(anchor)} Habit Fang`,
-    `The ${titleize(tail)} Drip Beast`,
-  ];
-  const sideTemplates = [
-    `The ${titleize(anchor)} Bandit`,
-    `${titleize(anchor)} Warden`,
-    `The ${titleize(tail)} Shade`,
-  ];
-  const mainTemplates = [
-    `${titleize(anchor)} Sovereign`,
-    `The ${titleize(tail)} Titan`,
-    `${titleize(anchor)} Overlord`,
-  ];
-  const templates = kind === 'daily' ? dailyTemplates : kind === 'side' ? sideTemplates : mainTemplates;
-  const hash = words.join('').length % templates.length;
-
-  return templates[hash];
-}
-
-function getXpRequiredForLevel(level: number) {
-  return 60 + (level - 1) * 30;
-}
-
-function getRankProgress(total: number) {
-  let level = 1;
-  let spentXp = 0;
-  let nextLevelXp = getXpRequiredForLevel(level);
-
-  while (total >= spentXp + nextLevelXp) {
-    spentXp += nextLevelXp;
-    level += 1;
-    nextLevelXp = getXpRequiredForLevel(level);
-  }
-
-  const currentLevelXp = total - spentXp;
-  const progressPercent = Math.round((currentLevelXp / nextLevelXp) * 100);
-
-  return {
-    level,
-    currentLevelXp,
-    nextLevelXp,
-    progressPercent,
-    rankTitle: rankTitles[Math.min(level - 1, rankTitles.length - 1)],
-  };
-}
-
-function buildInitialState(): AppState {
-  return {
-    dailyQuests: defaultDailyQuests,
-    sideQuests: defaultSideQuests,
-    mainQuests: defaultMainQuests,
-    completionHistory: [],
-  };
-}
-
-function normalizeDailyQuest(
-  quest: Partial<DailyQuest> & {
-    id?: string;
-    title?: string;
-    xp?: number;
-    done?: boolean;
-    targetCount?: number;
-    progressCount?: number;
-    cardPower?: number;
-  },
-) {
-  const cards = Array.isArray(quest.cards)
-    ? quest.cards.map(normalizeObjective)
-    : (() => {
-        const targetCount = Math.max(1, Number(quest.targetCount ?? 1));
-        const fallbackProgress = quest.done ? targetCount : 0;
-        const progressCount = clampCount(Number(quest.progressCount ?? fallbackProgress), 0, targetCount);
-        const cardPower = Math.max(1, Number(quest.cardPower ?? 3));
-
-        return Array.from({ length: targetCount }, (_, index) => ({
-          id: createId('daily-card'),
-          title: targetCount === 1 ? quest.title ?? 'Daily card' : `${quest.title ?? 'Daily card'} ${index + 1}`,
-          symbol: '🗡️',
-          cardPower,
-          done: index < progressCount,
-        }));
-      })();
-
-  return {
-    id: quest.id ?? createId('daily'),
-    title: quest.title ?? 'New daily routine',
-    xp: Number(quest.xp ?? 10),
-    cards,
-    monsterName: quest.monsterName?.trim() || undefined,
-    monsterArt: quest.monsterArt?.trim() || undefined,
-    monsterHp: normalizeMonsterHp(quest.monsterHp, cards.reduce((total, card) => total + card.cardPower, 0)),
-    recurrence: quest.recurrence ?? 'daily',
-    deadlineType: quest.deadlineType ?? 'endOfDay',
-    deadlineAt: normalizeDeadlineAt(quest.deadlineType ?? 'endOfDay', quest.deadlineAt),
-    completedAt: quest.completedAt,
-    cycleStartedAt: quest.cycleStartedAt ?? new Date().toISOString(),
-  };
-}
-
-function normalizeObjective(objective: Partial<Objective>) {
-  return {
-    id: objective.id ?? createId('objective'),
-    title: objective.title ?? 'New step',
-    symbol: objective.symbol?.trim() || '🗡️',
-    cardPower: Math.max(1, Number(objective.cardPower ?? 4)),
-    done: Boolean(objective.done),
-  };
-}
-
-function createDraftCard(defaultPower = '4', defaultSymbol = '🗡️'): DraftCard {
-  return {
-    id: createId('draft-card'),
-    title: '',
-    symbol: defaultSymbol,
-    cardPower: defaultPower,
-  };
-}
-
-function objectivesToDraftCards(objectives: Objective[]) {
-  return objectives.map((objective) => ({
-    id: createId('draft-card'),
-    title: objective.title,
-    symbol: objective.symbol || '🗡️',
-    cardPower: String(objective.cardPower),
-  }));
-}
-
-function normalizeDraftCards(cards: DraftCard[], fallbackBasePower: number) {
-  return cards
-    .map((card, index) => ({
-      title: card.title.trim(),
-      symbol: card.symbol.trim() || '🗡️',
-      cardPower: Number(card.cardPower),
-      fallbackPower: fallbackBasePower + index,
-    }))
-    .filter((card) => card.title)
-    .map((card) => ({
-      id: createId('objective'),
-      title: card.title,
-      symbol: card.symbol,
-      cardPower:
-        Number.isFinite(card.cardPower) && card.cardPower > 0 ? card.cardPower : card.fallbackPower,
-      done: false,
-    }));
-}
-
-function migrateLegacyCycleStartedAt<T extends DailyQuest | Quest>(
-  quest: T,
-  sourceStorageKey: string | null,
-): T {
-  if (sourceStorageKey !== 'quest-cat-state-v7' || quest.recurrence === 'none') {
-    return quest;
-  }
-
-  return {
-    ...quest,
-    cycleStartedAt: quest.completedAt ?? new Date(0).toISOString(),
-  };
-}
-
-function normalizeQuest(quest: Partial<Quest>) {
-  const objectives = Array.isArray(quest.objectives)
-    ? quest.objectives.map(normalizeObjective)
-    : [];
-  const done = objectives.length > 0 ? objectives.every((objective) => objective.done) : Boolean(quest.done);
-
-  return {
-    id: quest.id ?? createId('quest'),
-    title: quest.title ?? 'New quest',
-    xp: quest.xp,
-    difficulty: quest.difficulty,
-    monsterName: quest.monsterName?.trim() || undefined,
-    monsterArt: quest.monsterArt?.trim() || undefined,
-    monsterHp: normalizeMonsterHp(quest.monsterHp, objectives.reduce((total, objective) => total + objective.cardPower, 0)),
-    reward: quest.reward ?? 'Mystery reward',
-    done,
-    objectives,
-    recurrence: quest.recurrence ?? 'none',
-    deadlineType: quest.deadlineType ?? 'none',
-    deadlineAt: normalizeDeadlineAt(quest.deadlineType ?? 'none', quest.deadlineAt),
-    completedAt: quest.completedAt,
-    cycleStartedAt: quest.cycleStartedAt ?? new Date().toISOString(),
-  };
-}
-
-function normalizeHistoryEntry(entry: Partial<QuestHistoryEntry>): QuestHistoryEntry {
-  return {
-    id: entry.id ?? createId('history'),
-    family: (entry.family as QuestHistoryEntry['family']) ?? 'side',
-    questId: entry.questId ?? createId('quest-ref'),
-    title: entry.title ?? 'Completed quest',
-    reward: entry.reward ?? 'Reward claimed',
-    completedAt: entry.completedAt ?? new Date().toISOString(),
-    outcome: entry.outcome === 'loss' ? 'loss' : 'win',
-  };
-}
-
-function loadInitialState() {
-  if (typeof window === 'undefined') {
-    return buildInitialState();
-  }
-
-  const storageKeys = [
-    STORAGE_KEY,
-    'quest-cat-state-v7',
-    'quest-cat-state-v6',
-    'quest-cat-state-v5',
-    'quest-cat-state-v3',
-    'quest-cat-state-v2',
-    'quest-cat-state-v1',
-  ];
-  const sourceStorageKey = storageKeys.find((key) => window.localStorage.getItem(key) !== null) ?? null;
-  const savedState = sourceStorageKey ? window.localStorage.getItem(sourceStorageKey) : null;
-
-  if (!savedState) {
-    return buildInitialState();
-  }
-
-  try {
-    const parsedState = JSON.parse(savedState) as Partial<AppState>;
-
-    return {
-      dailyQuests: Array.isArray(parsedState.dailyQuests)
-        ? parsedState.dailyQuests
-            .map((quest) => normalizeDailyQuest(quest))
-            .map((quest) => migrateLegacyCycleStartedAt(quest, sourceStorageKey))
-        : defaultDailyQuests,
-      sideQuests: Array.isArray(parsedState.sideQuests)
-        ? parsedState.sideQuests
-            .map((quest) => normalizeQuest(quest))
-            .map((quest) => migrateLegacyCycleStartedAt(quest, sourceStorageKey))
-        : defaultSideQuests,
-      mainQuests: Array.isArray(parsedState.mainQuests)
-        ? parsedState.mainQuests
-            .map((quest) => normalizeQuest(quest))
-            .map((quest) => migrateLegacyCycleStartedAt(quest, sourceStorageKey))
-        : defaultMainQuests,
-      completionHistory: Array.isArray(parsedState.completionHistory)
-        ? parsedState.completionHistory.map((entry) => normalizeHistoryEntry(entry))
-        : [],
-    };
-  } catch {
-    return buildInitialState();
-  }
-}
-
-function buildBattleState(
-  selection: BoardSelection,
-  dailyQuests: DailyQuest[],
-  sideQuests: Quest[],
-  mainQuests: Quest[],
-): BattleState | null {
-  if (selection.kind === 'daily') {
-    const quest = dailyQuests.find((item) => item.id === selection.questId);
-
-    if (!quest) {
-      return null;
-    }
-
-    const cards = quest.cards.map<BattleCard>((card) => ({
-      id: card.id,
-      originId: quest.id,
-      title: card.title,
-      symbol: card.symbol || '🗡️',
-      cardPower: card.cardPower,
-      played: card.done,
-      flavor: `${card.cardPower} damage splash`,
-      family: 'daily',
-    }));
-    const cardDamageTotal = cards.reduce((total, card) => total + card.cardPower, 0);
-    const totalHp = normalizeMonsterHp(quest.monsterHp, cardDamageTotal);
-    const currentHp = Math.max(
-      0,
-      totalHp - cards.filter((card) => card.played).reduce((total, card) => total + card.cardPower, 0),
-    );
-
-    return {
-      title: quest.title,
-      subtitle: `Daily deck worth +${quest.xp} XP.`,
-      monsterArt: normalizeMonsterArt(quest.monsterArt, '🗡️'),
-      monsterName: quest.monsterName || autoGenerateMonsterName('daily', quest.title),
-      monsterMood: currentHp === 0 ? 'Collapsed under your routine combo.' : 'Still feeding on skipped habits.',
-      totalHp: Math.max(totalHp, 1),
-      currentHp,
-      cards,
-    };
-  }
-
-  const questList = selection.kind === 'side' ? sideQuests : mainQuests;
-  const quest = questList.find((item) => item.id === selection.questId);
-
-  if (!quest) {
-    return null;
-  }
-
-  const cards = quest.objectives.map<BattleCard>((objective) => ({
-    id: objective.id,
-    originId: objective.id,
-    title: objective.title,
-    symbol: objective.symbol || '🗡️',
-    cardPower: objective.cardPower,
-    played: objective.done,
-    flavor: selection.kind === 'side' ? 'Tactical side-quest move' : 'Storyline power move',
-    family: selection.kind,
-  }));
-  const cardDamageTotal = cards.reduce((total, card) => total + card.cardPower, 0);
-  const totalHp = normalizeMonsterHp(quest.monsterHp, cardDamageTotal);
-  const currentHp = Math.max(
-    0,
-    totalHp - cards.filter((card) => card.played).reduce((total, card) => total + card.cardPower, 0),
-  );
-  const monsterName = quest.monsterName || autoGenerateMonsterName(selection.kind, quest.title);
-
-  return {
-    title: quest.title,
-    subtitle: quest.reward,
-    monsterArt: normalizeMonsterArt(quest.monsterArt, '🗡️'),
-    monsterName,
-    monsterMood: selection.kind === 'side' ? 'A quick skirmish with bonus loot.' : 'A larger boss battle with story stakes.',
-    totalHp: Math.max(totalHp, 1),
-    currentHp,
-    cards,
-  };
-}
-
-function BattleBoard({
-  battleState,
-  hitCount,
-  lastPlayedId,
-  onBack,
-  onPlayCard,
-  onRecallCard,
-  onResetBattle,
-}: {
-  battleState: BattleState;
-  hitCount: number;
-  lastPlayedId: string | null;
-  onBack: () => void;
-  onPlayCard: (cardId: string) => void;
-  onRecallCard: (cardId: string) => void;
-  onResetBattle: () => void;
-}) {
-  const handCards = battleState.cards.filter((card) => !card.played);
-  const fieldCards = battleState.cards.filter((card) => card.played);
-  const monsterDefeated = battleState.currentHp <= 0;
-  const healthPercent = Math.max(
-    0,
-    Math.round((battleState.currentHp / battleState.totalHp) * 100),
-  );
-
-  return (
-    <main className="shell board-shell">
-      <section className="hero-card board-hero">
-        <button className="ghost-button back-button" onClick={onBack} type="button">
-          Back to Quests
-        </button>
-        <p className="eyebrow">CARD BATTLE</p>
-        <h1>{battleState.title}</h1>
-        <p className="hero-copy">{battleState.subtitle}</p>
-      </section>
-
-      <section className={`battle-scene ${hitCount > 0 ? 'is-hit' : ''}`} aria-label="Battle scene">
-        <div className="battle-atmosphere" aria-hidden="true" />
-
-        <section className="monster-stage">
-          <div className="monster-stage-topbar">
-            <div>
-              <span className="monster-label">Elite Encounter</span>
-              <strong>{battleState.monsterName}</strong>
-            </div>
-            <span className={`monster-status ${monsterDefeated ? 'is-victory' : ''}`}>
-              {monsterDefeated ? 'KO' : `${battleState.currentHp} HP`}
-            </span>
-          </div>
-
-          <div className="monster-intent-row">
-            <span className="intent-badge">
-              {monsterDefeated ? 'Broken Intent' : `Intent: endure ${handCards.length} more plays`}
-            </span>
-            <span className="battle-stat-chip">{battleState.totalHp} max HP</span>
-          </div>
-
-          {monsterDefeated ? <p className="victory-reward">Reward unlocked: {battleState.subtitle}</p> : null}
-
-          <article className="monster-boss-card" key={hitCount}>
-            <div className="monster-boss-topline">
-              <span className="battle-card-type">Boss</span>
-            </div>
-            <div className="monster-boss-art" aria-hidden="true">
-              {monsterDefeated ? (
-                '💥'
-              ) : isImageLike(battleState.monsterArt) ? (
-                <img alt="" className="monster-boss-image" src={battleState.monsterArt} />
-              ) : (
-                battleState.monsterArt
-              )}
-            </div>
-            <strong>{battleState.monsterName}</strong>
-            <small>{battleState.monsterMood}</small>
-          </article>
-
-          <div className="monster-bar-wrap">
-            <div className="monster-bar" aria-hidden="true">
-              <span style={{ width: `${healthPercent}%` }} />
-            </div>
-            <div className="battle-stats">
-              <span>{fieldCards.length} cards on field</span>
-            </div>
-          </div>
-        </section>
-
-        <section className="battlefield-lane">
-          <div className="section-heading battle-heading">
-            <h2>Played Cards</h2>
-            <span>{fieldCards.length} cards striking the monster</span>
-          </div>
-          <div className="field-row">
-            {fieldCards.length === 0 ? (
-              <article className="battle-empty field-empty">
-                <strong>No cards in play yet</strong>
-                <span>Pick a card from your hand and it will leap forward into the attack lane.</span>
-              </article>
-            ) : (
-              fieldCards.map((card, index) => (
-                <button
-                  className={`battle-card game-card is-played field-card ${lastPlayedId === card.id ? 'just-played' : ''}`}
-                  key={card.id}
-                  onClick={() => onRecallCard(card.id)}
-                  style={{ '--field-index': index } as CSSProperties}
-                  type="button"
-                >
-                  <div className="battle-card-topline">
-                    <span className="battle-card-type">field card</span>
-                  </div>
-                  <div className="battle-card-art" aria-hidden="true">
-                    {card.symbol || '🗡️'}
-                  </div>
-                  <strong>{card.title}</strong>
-                  <span className="battle-card-action">Recall to hand</span>
-                </button>
-              ))
-            )}
-          </div>
-        </section>
-
-        <section className="hand-dock">
-          <div className="hand-hud">
-            <div className="section-heading battle-heading">
-              <h2>Your Hand</h2>
-              <span>{handCards.length} cards waiting</span>
-            </div>
-            <button className="ghost-button reset-button" onClick={onResetBattle} type="button">
-              Reset Battle
-            </button>
-          </div>
-          <div className="hand-fan">
-            {handCards.length === 0 ? (
-              <article className="battle-empty hand-empty">
-                <strong>No cards in hand</strong>
-                <span>Everything playable is already on the battlefield.</span>
-              </article>
-            ) : (
-              handCards.map((card, index) => (
-                <button
-                  className="battle-card game-card hand-card"
-                  key={card.id}
-                  onClick={() => onPlayCard(card.id)}
-                  style={
-                    {
-                      '--card-index': index,
-                      '--card-count': handCards.length,
-                    } as CSSProperties
-                  }
-                  type="button"
-                >
-                  <div className="hand-card-inner">
-                    <div className="battle-card-art hand-card-art" aria-hidden="true">
-                      {card.symbol || '🗡️'}
-                    </div>
-                    <div className="hand-card-copy">
-                      <div className="battle-card-topline">
-                        <span className="battle-card-type">{card.family} card</span>
-                      </div>
-                      <strong>{card.title}</strong>
-                    </div>
-                  </div>
-                  <span className="battle-card-action">Play to field</span>
-                </button>
-              ))
-            )}
-          </div>
-        </section>
-      </section>
-    </main>
-  );
-}
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type Dispatch, type FormEvent, type SetStateAction } from 'react';
+import { BattleBoard } from './BattleBoard';
+import { OnboardingCard } from './OnboardingCard';
+import { ProfilePanel } from './ProfilePanel';
+import { deadlineOptions, recurrenceOptions } from './gameData';
+import {
+  autoGenerateMonsterName,
+  buildBattleState,
+  buildEmptyState,
+  buildInitialState,
+  clampCount,
+  createDraftCard,
+  createId,
+  createQuickStartDailyQuest,
+  createQuickStartMainQuest,
+  createQuickStartSideQuest,
+  formatDeadline,
+  formatRecurrence,
+  getDailyProgressLabel,
+  getDailyQuestPlayedCount,
+  getQuestCompletion,
+  getRankProgress,
+  getStreakStats,
+  getTotalXp,
+  getNextRewardMilestone,
+  hasRecurringCycleAdvanced,
+  isDailyQuestComplete,
+  isQuestComplete,
+  normalizeDeadlineAt,
+  normalizeDraftCards,
+  objectivesToDraftCards,
+  preserveObjectiveProgress,
+  shouldResetRecurring,
+} from './questDomain';
+import {
+  deleteStoredProfile,
+  loadProfileState,
+  loadProfiles,
+  parseProfileBackup,
+  saveProfileState,
+  saveProfilesIndex,
+  serializeProfileBackup,
+} from './storage';
+import type { BoardSelection, DailyQuest, DeadlineType, DraftCard, Objective, Quest, QuestHistoryEntry, Recurrence } from './types';
 
 export default function App() {
-  const [initialState] = useState(loadInitialState);
-  const [dailyQuests, setDailyQuests] = useState(initialState.dailyQuests);
-  const [sideQuests, setSideQuests] = useState(initialState.sideQuests);
-  const [mainQuests, setMainQuests] = useState(initialState.mainQuests);
-  const [completionHistory, setCompletionHistory] = useState(initialState.completionHistory);
+  const [loadedProfiles] = useState(loadProfiles);
+  const [profiles, setProfiles] = useState(loadedProfiles.index.profiles);
+  const [activeProfileId, setActiveProfileId] = useState(loadedProfiles.initialProfileId);
+  const [dailyQuests, setDailyQuests] = useState(loadedProfiles.initialState.dailyQuests);
+  const [sideQuests, setSideQuests] = useState(loadedProfiles.initialState.sideQuests);
+  const [mainQuests, setMainQuests] = useState(loadedProfiles.initialState.mainQuests);
+  const [completionHistory, setCompletionHistory] = useState(loadedProfiles.initialState.completionHistory);
   const [builderMode, setBuilderMode] = useState<'daily' | 'side' | 'main' | null>('side');
   const [selectedBoard, setSelectedBoard] = useState<BoardSelection | null>(null);
   const [lastPlayedId, setLastPlayedId] = useState<string | null>(null);
@@ -1040,13 +137,12 @@ export default function App() {
   const [editingHistoryReward, setEditingHistoryReward] = useState('');
   const [editingHistoryCompletedAt, setEditingHistoryCompletedAt] = useState('');
   const [editingHistoryOutcome, setEditingHistoryOutcome] = useState<'win' | 'loss'>('win');
+  const [profileStatus, setProfileStatus] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ dailyQuests, sideQuests, mainQuests, completionHistory }),
-    );
-  }, [completionHistory, dailyQuests, sideQuests, mainQuests]);
+    saveProfileState(activeProfileId, { dailyQuests, sideQuests, mainQuests, completionHistory });
+  }, [activeProfileId, completionHistory, dailyQuests, sideQuests, mainQuests]);
 
   useEffect(() => {
     function resetRecurringQuests() {
@@ -1145,12 +241,13 @@ export default function App() {
   const completedCount = dailyQuests.filter((quest) => isDailyQuestComplete(quest)).length;
   const completedSideCount = sideQuests.filter((quest) => quest.done).length;
   const completedMainCount = mainQuests.filter((quest) => quest.done).length;
-  const earnedXp = dailyQuests
-    .filter((quest) => isDailyQuestComplete(quest))
-    .reduce((total, quest) => total + quest.xp, 0);
   const sideQuestXp = sideQuests.reduce((total, quest) => total + (quest.xp ?? 0), 0);
-  const totalXp = baseXp + earnedXp;
+  const totalXp = getTotalXp(dailyQuests);
   const rankProgress = getRankProgress(totalXp);
+  const streakStats = useMemo(() => getStreakStats(completionHistory), [completionHistory]);
+  const nextRewardMilestone = getNextRewardMilestone(streakStats.totalWins);
+  const totalQuestCount = dailyQuests.length + sideQuests.length + mainQuests.length;
+  const showOnboarding = totalQuestCount === 0 && completionHistory.length === 0;
   const recentHistory = useMemo(
     () =>
       [...completionHistory].sort(
@@ -1166,6 +263,11 @@ export default function App() {
         : null,
     [dailyQuests, mainQuests, selectedBoard, sideQuests],
   );
+  const activeProfile = profiles.find((profile) => profile.id === activeProfileId) ?? profiles[0];
+
+  useEffect(() => {
+    saveProfilesIndex(activeProfileId, profiles);
+  }, [activeProfileId, profiles]);
 
   function logQuestCompletion(entry: Omit<QuestHistoryEntry, 'id' | 'completedAt'>, completedAt: string) {
     setCompletionHistory((current) => [
@@ -1306,13 +408,6 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
     const nextCards = current.filter((card) => card.id !== cardId);
     return nextCards.length > 0 ? nextCards : [createDraftCard(defaultPower)];
   });
-}
-
-function preserveObjectiveProgress(nextObjectives: Objective[], currentObjectives: Objective[]) {
-  return nextObjectives.map((objective, index) => ({
-    ...objective,
-    done: currentObjectives[index]?.done ?? false,
-  }));
 }
 
   function addSideQuest(event: FormEvent<HTMLFormElement>) {
@@ -1977,6 +1072,179 @@ function preserveObjectiveProgress(nextObjectives: Objective[], currentObjective
     }));
   }
 
+  function switchProfile(profileId: string) {
+    const nextState = loadProfileState(profileId);
+
+    setActiveProfileId(profileId);
+    setDailyQuests(nextState.dailyQuests);
+    setSideQuests(nextState.sideQuests);
+    setMainQuests(nextState.mainQuests);
+    setCompletionHistory(nextState.completionHistory);
+    setSelectedBoard(null);
+    setLastPlayedId(null);
+    setHitCount(0);
+    setEditingDailyId(null);
+    setEditingSideId(null);
+    setEditingMainId(null);
+    setEditingHistoryId(null);
+    setProfileStatus(null);
+  }
+
+  function addProfile() {
+    const name = window.prompt('Name this profile');
+    const trimmedName = name?.trim();
+
+    if (!trimmedName) {
+      return;
+    }
+
+    const profileId = createId('profile');
+    const nextState = buildEmptyState();
+
+    setProfiles((current) => [...current, { id: profileId, name: trimmedName }]);
+    saveProfileState(profileId, nextState);
+    setActiveProfileId(profileId);
+    setDailyQuests(nextState.dailyQuests);
+    setSideQuests(nextState.sideQuests);
+    setMainQuests(nextState.mainQuests);
+    setCompletionHistory(nextState.completionHistory);
+    setSelectedBoard(null);
+    setLastPlayedId(null);
+    setHitCount(0);
+    setBuilderMode('daily');
+    setProfileStatus('New profile created. Start with a starter quest or open the forge.');
+  }
+
+  function renameProfile() {
+    if (!activeProfile) {
+      return;
+    }
+
+    const name = window.prompt('Rename this profile', activeProfile.name);
+    const trimmedName = name?.trim();
+
+    if (!trimmedName) {
+      return;
+    }
+
+    setProfiles((current) =>
+      current.map((profile) =>
+        profile.id === activeProfile.id ? { ...profile, name: trimmedName } : profile,
+      ),
+    );
+  }
+
+  function deleteProfile() {
+    if (!activeProfile || profiles.length <= 1) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(`Delete ${activeProfile.name}'s profile and all saved quests on this device?`);
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    deleteStoredProfile(activeProfile.id);
+
+    const remainingProfiles = profiles.filter((profile) => profile.id !== activeProfile.id);
+    const nextProfile = remainingProfiles[0];
+
+    setProfiles(remainingProfiles);
+    switchProfile(nextProfile.id);
+  }
+
+  function exportActiveProfile() {
+    if (!activeProfile) {
+      return;
+    }
+
+    const payload = serializeProfileBackup(activeProfile, {
+      dailyQuests,
+      sideQuests,
+      mainQuests,
+      completionHistory,
+    });
+    const blob = new Blob([payload], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    const safeName = activeProfile.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'profile';
+
+    anchor.href = url;
+    anchor.download = `quest-cat-${safeName}-backup.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setProfileStatus(`Exported ${activeProfile.name}'s backup.`);
+  }
+
+  async function importProfileBackup(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      const raw = await file.text();
+      const imported = parseProfileBackup(raw);
+      const profileId = createId('profile');
+      const existingNames = new Set(profiles.map((profile) => profile.name));
+      let profileName = imported.profileName;
+      let suffix = 2;
+
+      while (existingNames.has(profileName)) {
+        profileName = `${imported.profileName} ${suffix}`;
+        suffix += 1;
+      }
+
+      saveProfileState(profileId, imported.state);
+      setProfiles((current) => [...current, { id: profileId, name: profileName }]);
+      setActiveProfileId(profileId);
+      setDailyQuests(imported.state.dailyQuests);
+      setSideQuests(imported.state.sideQuests);
+      setMainQuests(imported.state.mainQuests);
+      setCompletionHistory(imported.state.completionHistory);
+      setSelectedBoard(null);
+      setLastPlayedId(null);
+      setHitCount(0);
+      setProfileStatus(`Imported backup as ${profileName}.`);
+    } catch (error) {
+      setProfileStatus(error instanceof Error ? error.message : 'Could not import that backup.');
+    } finally {
+      event.target.value = '';
+    }
+  }
+
+  function addStarterPack() {
+    const starterState = buildInitialState();
+
+    setDailyQuests(starterState.dailyQuests);
+    setSideQuests(starterState.sideQuests);
+    setMainQuests(starterState.mainQuests);
+    setCompletionHistory(starterState.completionHistory);
+    setProfileStatus('Starter pack loaded for this profile.');
+  }
+
+  function addQuickStartQuest(kind: 'daily' | 'side' | 'main') {
+    if (kind === 'daily') {
+      setDailyQuests((current) => [...current, createQuickStartDailyQuest()]);
+      setBuilderMode('daily');
+      setProfileStatus('Added a quick-start daily deck.');
+      return;
+    }
+
+    if (kind === 'side') {
+      setSideQuests((current) => [...current, createQuickStartSideQuest()]);
+      setBuilderMode('side');
+      setProfileStatus('Added a quick-start side quest.');
+      return;
+    }
+
+    setMainQuests((current) => [...current, createQuickStartMainQuest()]);
+    setBuilderMode('main');
+    setProfileStatus('Added a quick-start main quest.');
+  }
+
   if (selectedBoard && activeBattle) {
     return (
       <BattleBoard
@@ -1999,7 +1267,39 @@ function preserveObjectiveProgress(nextObjectives: Objective[], currentObjective
         <p className="hero-copy">
           Just Daily Quest, Side Quest, and Main Quest. Open a battle and track your progress.
         </p>
+        <ProfilePanel
+          activeProfileId={activeProfileId}
+          activeProfileName={activeProfile?.name}
+          bestStreak={streakStats.bestStreak}
+          currentLevelXp={rankProgress.currentLevelXp}
+          currentStreak={streakStats.currentStreak}
+          importInputRef={importInputRef}
+          level={rankProgress.level}
+          nextLevelXp={rankProgress.nextLevelXp}
+          nextRewardGoal={nextRewardMilestone.wins}
+          nextRewardLabel={nextRewardMilestone.reward}
+          onAddProfile={addProfile}
+          onDeleteProfile={deleteProfile}
+          onExportProfile={exportActiveProfile}
+          onImportProfile={importProfileBackup}
+          onRenameProfile={renameProfile}
+          onSwitchProfile={switchProfile}
+          profileStatus={profileStatus}
+          profiles={profiles}
+          progressPercent={rankProgress.progressPercent}
+          rankTitle={rankProgress.rankTitle}
+          totalWins={streakStats.totalWins}
+        />
       </section>
+
+      {showOnboarding ? (
+        <OnboardingCard
+          onAddFirstDaily={() => addQuickStartQuest('daily')}
+          onAddFirstMainQuest={() => addQuickStartQuest('main')}
+          onAddFirstSideQuest={() => addQuickStartQuest('side')}
+          onLoadStarterPack={addStarterPack}
+        />
+      ) : null}
 
       <section className="section forge-section">
         <div className="section-heading">
@@ -2007,10 +1307,21 @@ function preserveObjectiveProgress(nextObjectives: Objective[], currentObjective
             <h2>Forge a Quest</h2>
             <span>{collapsedSections.forge ? 'Expand' : 'Collapse'}</span>
           </button>
-          <span>Build new quests, cards, monsters, and rewards</span>
+          <span>Build custom quests or use quick-start templates</span>
         </div>
         {!collapsedSections.forge ? (
           <>
+        <div className="quick-start-row">
+          <button className="ghost-button" onClick={() => addQuickStartQuest('daily')} type="button">
+            Quick Daily
+          </button>
+          <button className="ghost-button" onClick={() => addQuickStartQuest('side')} type="button">
+            Quick Side Quest
+          </button>
+          <button className="ghost-button" onClick={() => addQuickStartQuest('main')} type="button">
+            Quick Main Quest
+          </button>
+        </div>
         <div className="builder-toggle-row">
           <button className={`ghost-button ${builderMode === 'daily' ? 'is-selected' : ''}`} onClick={() => setBuilderMode('daily')} type="button">
             Daily Deck
