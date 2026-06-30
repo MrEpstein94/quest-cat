@@ -1,9 +1,10 @@
 :root {
-  font-family: "Trebuchet MS", "Avenir Next", Avenir, sans-serif;
-  color: #f8fafc;
+  font-family: "Arial Narrow", "Avenir Next Condensed", "Trebuchet MS", sans-serif;
+  color: #eef6ff;
   background:
-    radial-gradient(circle at top, rgba(242, 198, 109, 0.16), transparent 42%),
-    linear-gradient(180deg, #102532 0%, #09161f 100%);
+    radial-gradient(circle at top, rgba(96, 165, 250, 0.18), transparent 34%),
+    radial-gradient(circle at 50% 20%, rgba(34, 211, 238, 0.08), transparent 28%),
+    linear-gradient(180deg, #07111b 0%, #02060b 100%);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -22,6 +23,9 @@ body,
 
 body {
   margin: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 10, 16, 0.92), rgba(2, 6, 11, 0.98)),
+    repeating-linear-gradient(180deg, rgba(148, 163, 184, 0.04) 0 1px, transparent 1px 4px);
 }
 
 button,
@@ -55,15 +59,17 @@ select {
 
 .hero-card,
 .goal-card {
-  background: rgba(19, 37, 47, 0.88);
-  border: 1px solid rgba(93, 125, 142, 0.32);
+  background: linear-gradient(180deg, rgba(7, 20, 33, 0.92), rgba(6, 14, 25, 0.88));
+  border: 1px solid rgba(96, 165, 250, 0.24);
   backdrop-filter: blur(18px);
 }
 
 .hero-card {
   border-radius: 28px;
   padding: 24px;
-  box-shadow: 0 22px 50px rgba(3, 8, 13, 0.34);
+  box-shadow:
+    inset 0 0 0 1px rgba(125, 211, 252, 0.08),
+    0 22px 50px rgba(1, 5, 11, 0.48);
 }
 
 .hero-action {
@@ -74,12 +80,78 @@ select {
   text-align: center;
 }
 
+.system-banner,
+.system-grid {
+  position: relative;
+  z-index: 1;
+}
+
+.system-banner {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.system-banner-chip,
+.system-tile {
+  padding: 14px 14px 12px;
+  border-radius: 18px;
+  text-align: left;
+  background: linear-gradient(180deg, rgba(8, 24, 39, 0.9), rgba(5, 14, 24, 0.82));
+  border: 1px solid rgba(96, 165, 250, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.05);
+}
+
+.system-banner-chip span,
+.system-tile span,
+.system-banner-chip strong,
+.system-tile strong,
+.system-tile small {
+  display: block;
+}
+
+.system-banner-chip span,
+.system-tile span {
+  color: #7dd3fc;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.system-banner-chip strong,
+.system-tile strong {
+  margin-top: 8px;
+  color: #f0f9ff;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.system-banner-chip.is-alert {
+  background: linear-gradient(180deg, rgba(18, 35, 62, 0.96), rgba(10, 21, 38, 0.9));
+  border-color: rgba(129, 140, 248, 0.28);
+}
+
+.system-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.system-tile small {
+  margin-top: 8px;
+  color: #8fb3cc;
+  line-height: 1.35;
+}
+
 .rank-panel {
   margin-top: 18px;
   padding: 16px 18px;
   border-radius: 20px;
-  background: rgba(10, 25, 34, 0.7);
-  border: 1px solid rgba(134, 163, 178, 0.16);
+  background: rgba(6, 17, 29, 0.78);
+  border: 1px solid rgba(56, 189, 248, 0.16);
 }
 
 .profile-panel {
@@ -88,19 +160,19 @@ select {
   margin-top: 20px;
   padding: 16px 18px;
   border-radius: 20px;
-  background: rgba(10, 25, 34, 0.7);
-  border: 1px solid rgba(134, 163, 178, 0.16);
+  background: rgba(6, 17, 29, 0.78);
+  border: 1px solid rgba(56, 189, 248, 0.16);
   text-align: left;
 }
 
 .profile-panel-copy small,
 .profile-note {
-  color: #9fb2bf;
+  color: #8fb3cc;
 }
 
 .profile-status {
   margin: 0;
-  color: #fff1cc;
+  color: #bfe8ff;
   font-size: 0.84rem;
   line-height: 1.4;
 }
@@ -108,7 +180,7 @@ select {
 .profile-panel-copy strong {
   display: block;
   margin-top: 4px;
-  color: #fff7dc;
+  color: #f3fbff;
   font-size: 1.05rem;
 }
 
@@ -139,7 +211,7 @@ select {
   gap: 14px;
   text-align: left;
   background:
-    linear-gradient(135deg, rgba(22, 48, 62, 0.96) 0%, rgba(12, 30, 40, 0.92) 100%);
+    linear-gradient(135deg, rgba(8, 26, 43, 0.98) 0%, rgba(7, 17, 30, 0.96) 100%);
 }
 
 .onboarding-card h2 {
@@ -172,11 +244,16 @@ select {
   .quick-start-row > * {
     flex: 1 1 100%;
   }
+
+  .system-banner,
+  .system-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .eyebrow {
   margin: 0 0 10px;
-  color: #f6c76e;
+  color: #7dd3fc;
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.18em;
@@ -190,7 +267,7 @@ h1 {
 
 .hero-copy {
   margin: 12px 0 0;
-  color: #c1d2de;
+  color: #b7d3e6;
   font-size: 1rem;
   line-height: 1.5;
 }
@@ -205,7 +282,8 @@ h1 {
 .stat-card {
   border-radius: 20px;
   padding: 16px;
-  background: rgba(35, 59, 73, 0.8);
+  background: linear-gradient(180deg, rgba(10, 26, 42, 0.94), rgba(8, 20, 34, 0.86));
+  border: 1px solid rgba(96, 165, 250, 0.12);
 }
 
 .stat-value,
@@ -218,7 +296,7 @@ h1 {
 }
 
 .stat-value {
-  color: #fff1cc;
+  color: #f0f9ff;
   font-size: 1.45rem;
   font-weight: 800;
 }
@@ -227,7 +305,7 @@ h1 {
 .section-heading span,
 .goal-card small,
 .install-tip p {
-  color: #9fb2bf;
+  color: #88a9c1;
 }
 
 .rank-copy,
@@ -257,13 +335,13 @@ h1 {
 }
 
 .rank-copy strong {
-  color: #fff7dc;
+  color: #ecfeff;
   font-size: 0.98rem;
 }
 
 .rank-copy span,
 .rank-note {
-  color: #aabecb;
+  color: #9bb9ce;
   font-size: 0.82rem;
 }
 
@@ -272,14 +350,14 @@ h1 {
   margin-top: 12px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(63, 88, 102, 0.72);
+  background: rgba(22, 44, 63, 0.9);
 }
 
 .rank-bar span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #f6c76e 0%, #f59e0b 100%);
+  background: linear-gradient(90deg, #22d3ee 0%, #60a5fa 55%, #c084fc 100%);
 }
 
 .rank-note {
@@ -313,7 +391,7 @@ h1 {
 }
 
 .section-toggle span {
-  color: #f6c76e;
+  color: #7dd3fc;
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -383,9 +461,9 @@ h1 {
 }
 
 .ghost-button.is-selected {
-  border-color: rgba(246, 199, 110, 0.62);
-  background: rgba(245, 158, 11, 0.14);
-  color: #fff1cc;
+  border-color: rgba(96, 165, 250, 0.62);
+  background: rgba(59, 130, 246, 0.16);
+  color: #eff6ff;
 }
 
 .task-card {
@@ -408,14 +486,14 @@ h1 {
 .game-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(232, 206, 146, 0.42);
+  border: 1px solid rgba(96, 165, 250, 0.26);
   background:
-    radial-gradient(circle at top left, rgba(255, 233, 182, 0.18), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(186, 113, 36, 0.18), transparent 26%),
-    linear-gradient(160deg, rgba(25, 37, 49, 0.98), rgba(48, 64, 79, 0.96));
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 22%),
+    radial-gradient(circle at bottom right, rgba(99, 102, 241, 0.16), transparent 24%),
+    linear-gradient(160deg, rgba(7, 19, 31, 0.98), rgba(13, 30, 47, 0.96));
   box-shadow:
-    inset 0 0 0 1px rgba(255, 237, 201, 0.08),
-    0 20px 40px rgba(3, 8, 13, 0.24);
+    inset 0 0 0 1px rgba(191, 219, 254, 0.06),
+    0 20px 40px rgba(1, 5, 11, 0.32);
 }
 
 .game-card::before {
@@ -423,7 +501,7 @@ h1 {
   position: absolute;
   inset: 10px;
   border-radius: 18px;
-  border: 1px solid rgba(246, 199, 110, 0.16);
+  border: 1px solid rgba(125, 211, 252, 0.12);
   pointer-events: none;
 }
 
@@ -622,8 +700,8 @@ h1 {
   display: inline-block;
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(246, 199, 110, 0.14);
-  color: #fff1cc;
+  background: rgba(34, 211, 238, 0.12);
+  color: #dff7ff;
   font-size: 0.82rem;
   font-weight: 700;
 }
@@ -644,11 +722,11 @@ h1 {
 }
 
 .ghost-button {
-  border: 1px solid rgba(159, 178, 191, 0.26);
+  border: 1px solid rgba(125, 211, 252, 0.18);
   border-radius: 999px;
   padding: 10px 14px;
-  background: rgba(7, 17, 24, 0.28);
-  color: #d9e5ec;
+  background: rgba(5, 13, 21, 0.5);
+  color: #d9f0ff;
   font-size: 0.82rem;
   font-weight: 700;
 }
@@ -658,9 +736,9 @@ h1 {
 }
 
 .card-rename-button {
-  color: #fff1cc;
-  border-color: rgba(246, 199, 110, 0.46);
-  background: rgba(245, 158, 11, 0.14);
+  color: #ecfeff;
+  border-color: rgba(56, 189, 248, 0.34);
+  background: rgba(14, 165, 233, 0.14);
 }
 
 .mini-stepper {
@@ -689,8 +767,8 @@ h1 {
   margin-top: 14px;
   padding: 18px;
   border-radius: 22px;
-  background: rgba(19, 37, 47, 0.72);
-  border: 1px solid rgba(93, 125, 142, 0.24);
+  background: rgba(6, 17, 29, 0.78);
+  border: 1px solid rgba(56, 189, 248, 0.18);
   display: grid;
   gap: 12px;
 }
@@ -701,31 +779,31 @@ h1 {
 
 .quest-form h3 {
   margin: 0;
-  color: #fff7dc;
+  color: #ecfeff;
   font-size: 1rem;
 }
 
 .form-note,
 .form-helper {
   margin: 0;
-  color: #aabecb;
+  color: #97b7cb;
   font-size: 0.82rem;
   line-height: 1.45;
 }
 
 .form-helper {
-  color: #fff1cc;
+  color: #bae6fd;
 }
 
 .quest-form input,
 .quest-form textarea,
 .quest-form select {
   width: 100%;
-  border: 1px solid rgba(147, 170, 182, 0.2);
+  border: 1px solid rgba(125, 211, 252, 0.16);
   border-radius: 16px;
   padding: 14px 16px;
-  background: rgba(7, 17, 24, 0.45);
-  color: #f8fafc;
+  background: rgba(4, 11, 18, 0.68);
+  color: #eff6ff;
 }
 
 .quest-form textarea {
@@ -801,11 +879,11 @@ h1 {
   border: 0;
   border-radius: 22px;
   padding: 18px;
-  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
-  color: #fff7ed;
+  background: linear-gradient(180deg, #38bdf8 0%, #2563eb 100%);
+  color: #eff6ff;
   font-size: 1rem;
   font-weight: 800;
-  box-shadow: 0 16px 34px rgba(217, 119, 6, 0.28);
+  box-shadow: 0 16px 34px rgba(37, 99, 235, 0.28);
 }
 
 .install-tip {
@@ -847,10 +925,10 @@ h1 {
   padding: 24px 18px 18px;
   border-radius: 34px;
   background:
-    radial-gradient(circle at top, rgba(244, 114, 23, 0.18), transparent 22%),
-    radial-gradient(circle at center 20%, rgba(252, 211, 77, 0.08), transparent 28%),
-    linear-gradient(180deg, rgba(8, 14, 20, 0.98), rgba(19, 27, 36, 0.96));
-  border: 1px solid rgba(121, 96, 59, 0.34);
+    radial-gradient(circle at top, rgba(56, 189, 248, 0.16), transparent 22%),
+    radial-gradient(circle at center 20%, rgba(99, 102, 241, 0.1), transparent 28%),
+    linear-gradient(180deg, rgba(3, 9, 16, 0.98), rgba(8, 17, 29, 0.96));
+  border: 1px solid rgba(56, 189, 248, 0.2);
   box-shadow:
     inset 0 0 0 1px rgba(255, 231, 178, 0.06),
     0 30px 60px rgba(3, 8, 13, 0.36);
@@ -912,9 +990,9 @@ h1 {
   justify-content: center;
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(64, 20, 20, 0.72);
-  border: 1px solid rgba(248, 113, 113, 0.3);
-  color: #ffd0c9;
+  background: rgba(8, 31, 51, 0.82);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  color: #d9f5ff;
   font-size: 0.8rem;
   font-weight: 800;
 }
@@ -928,9 +1006,9 @@ h1 {
   justify-content: center;
   padding: 10px 14px;
   border-radius: 999px;
-  background: rgba(245, 158, 11, 0.16);
-  border: 1px solid rgba(246, 199, 110, 0.24);
-  color: #fff1cc;
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  color: #e0f7ff;
   font-size: 0.84rem;
   font-weight: 800;
 }
@@ -942,7 +1020,7 @@ h1 {
 }
 
 .monster-label {
-  color: #f6c76e;
+  color: #67e8f9;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -955,21 +1033,21 @@ h1 {
 
 .monster-header strong,
 .monster-copy strong {
-  color: #fff7dc;
+  color: #eff6ff;
 }
 
 .monster-status {
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(7, 17, 24, 0.34);
-  color: #ffd8cf;
+  background: rgba(5, 12, 20, 0.6);
+  color: #c7f0ff;
   font-size: 0.82rem;
   font-weight: 800;
 }
 
 .monster-status.is-victory {
-  color: #fff7dc;
-  background: rgba(217, 119, 6, 0.28);
+  color: #eff6ff;
+  background: rgba(37, 99, 235, 0.3);
 }
 
 .monster-copy span {
@@ -1002,14 +1080,14 @@ h1 {
   margin-top: 18px;
   padding: 22px 24px 26px;
   border-radius: 30px;
-  border: 1px solid rgba(232, 206, 146, 0.42);
+  border: 1px solid rgba(96, 165, 250, 0.32);
   background:
-    radial-gradient(circle at top left, rgba(255, 205, 96, 0.18), transparent 22%),
-    radial-gradient(circle at center right, rgba(239, 68, 68, 0.2), transparent 30%),
-    linear-gradient(160deg, rgba(69, 23, 20, 0.98), rgba(116, 38, 28, 0.94));
+    radial-gradient(circle at top left, rgba(125, 211, 252, 0.16), transparent 22%),
+    radial-gradient(circle at center right, rgba(99, 102, 241, 0.18), transparent 30%),
+    linear-gradient(160deg, rgba(7, 27, 47, 0.98), rgba(12, 45, 78, 0.94));
   box-shadow:
-    inset 0 0 0 1px rgba(255, 237, 201, 0.1),
-    0 20px 40px rgba(3, 8, 13, 0.3);
+    inset 0 0 0 1px rgba(191, 219, 254, 0.08),
+    0 20px 40px rgba(1, 5, 11, 0.38);
   transform: perspective(900px) translateZ(0) scale(1.02);
 }
 
@@ -1022,7 +1100,7 @@ h1 {
 .monster-boss-card small {
   display: block;
   margin-top: 8px;
-  color: #f8d8cc;
+  color: #cbe7ff;
   font-size: 0.92rem;
 }
 
@@ -1040,8 +1118,8 @@ h1 {
   justify-content: center;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(7, 17, 24, 0.34);
-  color: #fff1cc;
+  background: rgba(5, 12, 20, 0.6);
+  color: #dff6ff;
   font-size: 0.78rem;
   font-weight: 800;
   white-space: nowrap;
@@ -1062,14 +1140,14 @@ h1 {
   margin-top: 14px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(63, 88, 102, 0.72);
+  background: rgba(18, 36, 53, 0.9);
 }
 
 .monster-bar span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #f97316 0%, #ef4444 100%);
+  background: linear-gradient(90deg, #22d3ee 0%, #3b82f6 55%, #6366f1 100%);
 }
 
 .monster-bar-wrap {
@@ -1110,9 +1188,9 @@ h1 {
   padding: 28px 18px 12px;
   border-radius: 34px;
   background:
-    radial-gradient(circle at center top, rgba(255, 201, 102, 0.08), transparent 22%),
-    linear-gradient(180deg, rgba(24, 35, 46, 0.72), rgba(12, 18, 25, 0.86));
-  border: 1px solid rgba(116, 146, 164, 0.16);
+    radial-gradient(circle at center top, rgba(56, 189, 248, 0.08), transparent 22%),
+    linear-gradient(180deg, rgba(10, 23, 38, 0.78), rgba(5, 12, 20, 0.9));
+  border: 1px solid rgba(96, 165, 250, 0.12);
   box-shadow:
     inset 0 0 40px rgba(4, 9, 13, 0.28),
     inset 0 -28px 50px rgba(6, 10, 16, 0.42);
@@ -1133,11 +1211,11 @@ h1 {
   position: relative;
   overflow: hidden;
   min-height: 0;
-  border: 1px solid rgba(232, 206, 146, 0.42);
+  border: 1px solid rgba(96, 165, 250, 0.24);
   background:
-    radial-gradient(circle at top left, rgba(255, 233, 182, 0.18), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(186, 113, 36, 0.18), transparent 26%),
-    linear-gradient(155deg, rgba(19, 37, 47, 0.98), rgba(36, 57, 73, 0.96));
+    radial-gradient(circle at top left, rgba(125, 211, 252, 0.14), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(99, 102, 241, 0.14), transparent 26%),
+    linear-gradient(155deg, rgba(7, 21, 35, 0.98), rgba(12, 30, 49, 0.96));
   color: #f8fafc;
   text-align: left;
   box-shadow:
@@ -1158,9 +1236,9 @@ h1 {
 
 .battle-card.is-played {
   background:
-    radial-gradient(circle at top left, rgba(255, 210, 168, 0.18), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(248, 113, 113, 0.22), transparent 28%),
-    linear-gradient(155deg, rgba(56, 38, 31, 0.98), rgba(88, 50, 40, 0.96));
+    radial-gradient(circle at top left, rgba(103, 232, 249, 0.18), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.22), transparent 28%),
+    linear-gradient(155deg, rgba(9, 36, 61, 0.98), rgba(15, 52, 86, 0.96));
 }
 
 .battle-card.just-played {
@@ -1186,7 +1264,7 @@ h1 {
 }
 
 .battle-card-type {
-  color: #f6c76e;
+  color: #67e8f9;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -1218,14 +1296,14 @@ h1 {
 
 .battle-card-action {
   margin-top: 8px;
-  color: #fff7dc;
+  color: #dff6ff;
   font-size: 0.76rem;
   font-weight: 800;
 }
 
 .battle-empty {
-  border: 1px dashed rgba(147, 170, 182, 0.3);
-  background: rgba(10, 25, 34, 0.5);
+  border: 1px dashed rgba(125, 211, 252, 0.24);
+  background: rgba(6, 17, 29, 0.58);
 }
 
 .battle-empty span {
@@ -1248,7 +1326,7 @@ h1 {
   z-index: 3;
   margin-top: 18px;
   padding: 14px 0 0;
-  border-top: 1px solid rgba(125, 101, 60, 0.2);
+  border-top: 1px solid rgba(56, 189, 248, 0.12);
   background:
     linear-gradient(180deg, rgba(9, 14, 20, 0), rgba(7, 11, 16, 0.4) 22%),
     transparent;

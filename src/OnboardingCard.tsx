@@ -14,23 +14,23 @@ export function OnboardingCard({
   return (
     <section className="section">
       <article className="hero-card onboarding-card">
-        <p className="eyebrow">NEW PROFILE</p>
-        <h2>Start fast</h2>
+        <p className="eyebrow">SYSTEM ONLINE</p>
+        <h2>Awaken your hunter profile</h2>
         <p className="hero-copy">
-          This profile is empty. Load a starter pack or add one quick quest before opening the full forge.
+          Start with a preset mission pack or create your first daily training, gate run, or boss raid.
         </p>
         <div className="onboarding-actions">
           <button className="primary-button" onClick={onLoadStarterPack} type="button">
-            Load Starter Pack
+            Load Hunter Pack
           </button>
           <button className="ghost-button" onClick={onAddFirstDaily} type="button">
-            Add First Daily
+            Add Training
           </button>
           <button className="ghost-button" onClick={onAddFirstSideQuest} type="button">
-            Add First Side Quest
+            Add Gate Run
           </button>
           <button className="ghost-button" onClick={onAddFirstMainQuest} type="button">
-            Add First Main Quest
+            Add Boss Raid
           </button>
         </div>
       </article>

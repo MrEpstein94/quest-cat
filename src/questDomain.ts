@@ -27,7 +27,7 @@ export function isDailyQuestComplete(quest: DailyQuest) {
 
 export function getDailyProgressLabel(quest: DailyQuest) {
   const playedCount = quest.cards.filter((card) => card.done).length;
-  return `${playedCount} / ${quest.cards.length} cards played`;
+  return `${playedCount} / ${quest.cards.length} skills committed`;
 }
 
 export function getDailyQuestPlayedCount(quest: DailyQuest) {
@@ -125,7 +125,7 @@ export function formatRecurrence(recurrence: Recurrence) {
     return 'Repeats weekly';
   }
 
-  return 'One-time quest';
+  return 'One-time mission';
 }
 
 export function shouldResetRecurring(completedAt: string | undefined, recurrence: Recurrence, now = new Date()) {
@@ -180,7 +180,7 @@ export function getQuestCompletion(quest: Quest) {
     completedObjectives,
     objectiveCount,
     progressLabel:
-      objectiveCount === 0 ? 'No sub quests yet' : `${completedObjectives} / ${objectiveCount} cards played`,
+      objectiveCount === 0 ? 'No sub-missions yet' : `${completedObjectives} / ${objectiveCount} skills committed`,
   };
 }
 
@@ -439,7 +439,7 @@ export function buildBattleState(
       symbol: card.symbol || '🗡️',
       cardPower: card.cardPower,
       played: card.done,
-      flavor: `${card.cardPower} damage splash`,
+      flavor: `${card.cardPower} power strike`,
       family: 'daily',
     }));
     const cardDamageTotal = cards.reduce((total, card) => total + card.cardPower, 0);
@@ -451,7 +451,7 @@ export function buildBattleState(
 
     return {
       title: quest.title,
-      subtitle: `Daily deck worth +${quest.xp} XP.`,
+      subtitle: `Daily training reward: +${quest.xp} XP.`,
       monsterArt: normalizeMonsterArt(quest.monsterArt, '🗡️'),
       monsterName: quest.monsterName || autoGenerateMonsterName('daily', quest.title),
       monsterMood: currentHp === 0 ? 'Collapsed under your routine combo.' : 'Still feeding on skipped habits.',
@@ -475,7 +475,7 @@ export function buildBattleState(
     symbol: objective.symbol || '🗡️',
     cardPower: objective.cardPower,
     played: objective.done,
-    flavor: selection.kind === 'side' ? 'Tactical side-quest move' : 'Storyline power move',
+    flavor: selection.kind === 'side' ? 'Gate-clearing technique' : 'Raid-finishing technique',
     family: selection.kind,
   }));
   const cardDamageTotal = cards.reduce((total, card) => total + card.cardPower, 0);

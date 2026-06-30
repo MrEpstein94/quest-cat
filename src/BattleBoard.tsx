@@ -28,9 +28,9 @@ export function BattleBoard({
     <main className="shell board-shell">
       <section className="hero-card board-hero">
         <button className="ghost-button back-button" onClick={onBack} type="button">
-          Back to Quests
+          Back to System
         </button>
-        <p className="eyebrow">CARD BATTLE</p>
+        <p className="eyebrow">GATE RAID</p>
         <h1>{battleState.title}</h1>
         <p className="hero-copy">{battleState.subtitle}</p>
       </section>
@@ -41,7 +41,7 @@ export function BattleBoard({
         <section className="monster-stage">
           <div className="monster-stage-topbar">
             <div>
-              <span className="monster-label">Elite Encounter</span>
+              <span className="monster-label">Dungeon Boss</span>
               <strong>{battleState.monsterName}</strong>
             </div>
             <span className={`monster-status ${monsterDefeated ? 'is-victory' : ''}`}>
@@ -51,12 +51,12 @@ export function BattleBoard({
 
           <div className="monster-intent-row">
             <span className="intent-badge">
-              {monsterDefeated ? 'Broken Intent' : `Intent: endure ${handCards.length} more plays`}
+              {monsterDefeated ? 'Core shattered' : `Boss phase: survive ${handCards.length} more actions`}
             </span>
             <span className="battle-stat-chip">{battleState.totalHp} max HP</span>
           </div>
 
-          {monsterDefeated ? <p className="victory-reward">Reward unlocked: {battleState.subtitle}</p> : null}
+          {monsterDefeated ? <p className="victory-reward">Raid reward unlocked: {battleState.subtitle}</p> : null}
 
           <article className="monster-boss-card" key={hitCount}>
             <div className="monster-boss-topline">
@@ -80,21 +80,21 @@ export function BattleBoard({
               <span style={{ width: `${healthPercent}%` }} />
             </div>
             <div className="battle-stats">
-              <span>{fieldCards.length} cards on field</span>
+              <span>{fieldCards.length} skills committed</span>
             </div>
           </div>
         </section>
 
         <section className="battlefield-lane">
           <div className="section-heading battle-heading">
-            <h2>Played Cards</h2>
-            <span>{fieldCards.length} cards striking the monster</span>
+            <h2>Committed Skills</h2>
+            <span>{fieldCards.length} skills pressuring the boss</span>
           </div>
           <div className="field-row">
             {fieldCards.length === 0 ? (
               <article className="battle-empty field-empty">
                 <strong>No cards in play yet</strong>
-                <span>Pick a card from your hand and it will leap forward into the attack lane.</span>
+                <span>Commit an action from your loadout and it will enter the assault line.</span>
               </article>
             ) : (
               fieldCards.map((card, index) => (
@@ -106,13 +106,13 @@ export function BattleBoard({
                   type="button"
                 >
                   <div className="battle-card-topline">
-                    <span className="battle-card-type">field card</span>
+                    <span className="battle-card-type">active skill</span>
                   </div>
                   <div className="battle-card-art" aria-hidden="true">
                     {card.symbol || '🗡️'}
                   </div>
                   <strong>{card.title}</strong>
-                  <span className="battle-card-action">Recall to hand</span>
+                  <span className="battle-card-action">Withdraw skill</span>
                 </button>
               ))
             )}
@@ -122,18 +122,18 @@ export function BattleBoard({
         <section className="hand-dock">
           <div className="hand-hud">
             <div className="section-heading battle-heading">
-              <h2>Your Hand</h2>
-              <span>{handCards.length} cards waiting</span>
+              <h2>Hunter Loadout</h2>
+              <span>{handCards.length} actions ready</span>
             </div>
             <button className="ghost-button reset-button" onClick={onResetBattle} type="button">
-              Reset Battle
+              Reset Raid
             </button>
           </div>
           <div className="hand-fan">
             {handCards.length === 0 ? (
               <article className="battle-empty hand-empty">
-                <strong>No cards in hand</strong>
-                <span>Everything playable is already on the battlefield.</span>
+                <strong>No actions remaining</strong>
+                <span>Everything ready for use is already committed.</span>
               </article>
             ) : (
               handCards.map((card, index) => (
@@ -155,12 +155,12 @@ export function BattleBoard({
                     </div>
                     <div className="hand-card-copy">
                       <div className="battle-card-topline">
-                        <span className="battle-card-type">{card.family} card</span>
+                        <span className="battle-card-type">{card.family} skill</span>
                       </div>
                       <strong>{card.title}</strong>
                     </div>
                   </div>
-                  <span className="battle-card-action">Play to field</span>
+                  <span className="battle-card-action">Commit skill</span>
                 </button>
               ))
             )}

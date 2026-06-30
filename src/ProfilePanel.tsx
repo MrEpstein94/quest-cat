@@ -54,38 +54,38 @@ export function ProfilePanel({
       <div className="hero-stats">
         <article className="stat-card">
           <strong className="stat-value">{currentStreak}</strong>
-          <span className="stat-label">Current streak</span>
+          <span className="stat-label">Active combo</span>
         </article>
         <article className="stat-card">
           <strong className="stat-value">{bestStreak}</strong>
-          <span className="stat-label">Best streak</span>
+          <span className="stat-label">Best combo</span>
         </article>
         <article className="stat-card">
           <strong className="stat-value">{totalWins}</strong>
-          <span className="stat-label">Wins logged</span>
+          <span className="stat-label">Raids cleared</span>
         </article>
         <article className="stat-card">
           <strong className="stat-value">{nextRewardGoal}</strong>
-          <span className="stat-label">Next reward goal</span>
+          <span className="stat-label">Next system reward</span>
         </article>
       </div>
 
       <div className="rank-panel">
         <div className="rank-copy">
           <strong>{rankTitle}</strong>
-          <span>Level {level}</span>
+          <span>Hunter Level {level}</span>
         </div>
         <div className="rank-bar" aria-hidden="true">
           <span style={{ width: `${progressPercent}%` }} />
         </div>
         <p className="rank-note">
-          {currentLevelXp} / {nextLevelXp} XP to next rank. Reward track: {nextRewardLabel}
+          {currentLevelXp} / {nextLevelXp} XP to next rank. System reward: {nextRewardLabel}
         </p>
       </div>
 
       <div className="profile-panel">
         <div className="profile-panel-copy">
-          <small>Active profile</small>
+          <small>Active hunter</small>
           <strong>{activeProfileName ?? DEFAULT_PROFILE_NAME}</strong>
         </div>
         <div className="profile-controls">
@@ -130,7 +130,7 @@ export function ProfilePanel({
           type="file"
         />
         <p className="profile-note">
-          Each profile keeps separate quests and history on this browser. Export creates a JSON backup; import adds a new profile from backup.
+          Each hunter profile keeps separate missions and raid history in this browser. Export creates a JSON backup; import adds a new hunter from backup.
         </p>
         {profileStatus ? <p className="profile-status">{profileStatus}</p> : null}
       </div>

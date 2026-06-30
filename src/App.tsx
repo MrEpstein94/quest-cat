@@ -255,6 +255,18 @@ export default function App() {
       ),
     [completionHistory],
   );
+  const systemTimestampLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      }).format(new Date()),
+    [],
+  );
+  const systemAlertLabel =
+    mainQuests.length > 0 ? 'Boss raid detected' : sideQuests.length > 0 ? 'Gate activity detected' : 'Training window stable';
 
   const activeBattle = useMemo(
     () =>
@@ -1112,7 +1124,7 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
     setLastPlayedId(null);
     setHitCount(0);
     setBuilderMode('daily');
-    setProfileStatus('New profile created. Start with a starter quest or open the forge.');
+    setProfileStatus('Hunter profile created. Initialize a mission or load a hunter pack.');
   }
 
   function renameProfile() {
@@ -1174,7 +1186,7 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
     anchor.download = `quest-cat-${safeName}-backup.json`;
     anchor.click();
     URL.revokeObjectURL(url);
-    setProfileStatus(`Exported ${activeProfile.name}'s backup.`);
+    setProfileStatus(`Hunter archive exported for ${activeProfile.name}.`);
   }
 
   async function importProfileBackup(event: ChangeEvent<HTMLInputElement>) {
@@ -1207,9 +1219,9 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
       setSelectedBoard(null);
       setLastPlayedId(null);
       setHitCount(0);
-      setProfileStatus(`Imported backup as ${profileName}.`);
+      setProfileStatus(`Hunter archive restored as ${profileName}.`);
     } catch (error) {
-      setProfileStatus(error instanceof Error ? error.message : 'Could not import that backup.');
+      setProfileStatus(error instanceof Error ? error.message : 'Hunter archive import failed.');
     } finally {
       event.target.value = '';
     }
@@ -1222,27 +1234,27 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
     setSideQuests(starterState.sideQuests);
     setMainQuests(starterState.mainQuests);
     setCompletionHistory(starterState.completionHistory);
-    setProfileStatus('Starter pack loaded for this profile.');
+    setProfileStatus('Hunter pack initialized for this profile.');
   }
 
   function addQuickStartQuest(kind: 'daily' | 'side' | 'main') {
     if (kind === 'daily') {
       setDailyQuests((current) => [...current, createQuickStartDailyQuest()]);
       setBuilderMode('daily');
-      setProfileStatus('Added a quick-start daily deck.');
+      setProfileStatus('Quick training mission issued.');
       return;
     }
 
     if (kind === 'side') {
       setSideQuests((current) => [...current, createQuickStartSideQuest()]);
       setBuilderMode('side');
-      setProfileStatus('Added a quick-start side quest.');
+      setProfileStatus('Quick gate mission issued.');
       return;
     }
 
     setMainQuests((current) => [...current, createQuickStartMainQuest()]);
     setBuilderMode('main');
-    setProfileStatus('Added a quick-start main quest.');
+    setProfileStatus('Quick boss raid issued.');
   }
 
   if (selectedBoard && activeBattle) {
@@ -1262,11 +1274,42 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
   return (
     <main className="shell">
       <section className="hero-card home-hero">
-        <p className="eyebrow">QUEST MENU</p>
-        <h1>Quest Cat</h1>
+        <p className="eyebrow">HUNTER SYSTEM</p>
+        <h1>Arise</h1>
         <p className="hero-copy">
-          Just Daily Quest, Side Quest, and Main Quest. Open a battle and track your progress.
+          Build your hunter routine, clear gates, and push through boss raids with a Solo Leveling-style system UI.
         </p>
+        <div className="system-banner" aria-label="Hunter system status">
+          <div className="system-banner-chip">
+            <span>Active Hunter</span>
+            <strong>{activeProfile?.name ?? 'Hunter'}</strong>
+          </div>
+          <div className="system-banner-chip">
+            <span>Timestamp</span>
+            <strong>{systemTimestampLabel}</strong>
+          </div>
+          <div className="system-banner-chip is-alert">
+            <span>Alert</span>
+            <strong>{systemAlertLabel}</strong>
+          </div>
+        </div>
+        <div className="system-grid" aria-label="Mission summary">
+          <article className="system-tile">
+            <span>Training</span>
+            <strong>{dailyQuests.length}</strong>
+            <small>{completedCount} cleared today</small>
+          </article>
+          <article className="system-tile">
+            <span>Gates</span>
+            <strong>{sideQuests.length}</strong>
+            <small>{completedSideCount} cleared</small>
+          </article>
+          <article className="system-tile">
+            <span>Boss Raids</span>
+            <strong>{mainQuests.length}</strong>
+            <small>{completedMainCount} conquered</small>
+          </article>
+        </div>
         <ProfilePanel
           activeProfileId={activeProfileId}
           activeProfileName={activeProfile?.name}
@@ -1304,45 +1347,45 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
       <section className="section forge-section">
         <div className="section-heading">
           <button className="section-toggle" onClick={() => toggleSection('forge')} type="button">
-            <h2>Forge a Quest</h2>
+            <h2>Issue a Mission</h2>
             <span>{collapsedSections.forge ? 'Expand' : 'Collapse'}</span>
           </button>
-          <span>Build custom quests or use quick-start templates</span>
+          <span>Create missions manually or spawn quick hunter templates</span>
         </div>
         {!collapsedSections.forge ? (
           <>
         <div className="quick-start-row">
           <button className="ghost-button" onClick={() => addQuickStartQuest('daily')} type="button">
-            Quick Daily
+            Quick Training
           </button>
           <button className="ghost-button" onClick={() => addQuickStartQuest('side')} type="button">
-            Quick Side Quest
+            Quick Gate
           </button>
           <button className="ghost-button" onClick={() => addQuickStartQuest('main')} type="button">
-            Quick Main Quest
+            Quick Raid
           </button>
         </div>
         <div className="builder-toggle-row">
           <button className={`ghost-button ${builderMode === 'daily' ? 'is-selected' : ''}`} onClick={() => setBuilderMode('daily')} type="button">
-            Daily Deck
+            Training
           </button>
           <button className={`ghost-button ${builderMode === 'side' ? 'is-selected' : ''}`} onClick={() => setBuilderMode('side')} type="button">
-            Side Quest
+            Gate Run
           </button>
           <button className={`ghost-button ${builderMode === 'main' ? 'is-selected' : ''}`} onClick={() => setBuilderMode('main')} type="button">
-            Main Quest
+            Boss Raid
           </button>
         </div>
 
         {builderMode === 'daily' ? (
           <form className="quest-form" onSubmit={addDailyQuest}>
-            <h3>Add Daily Card Deck</h3>
-            <p className="form-note">Create a repeatable routine deck with named cards, a monster look you choose, and either a custom monster name or an auto-generated one.</p>
-            <input onChange={(event) => setDailyTitle(event.target.value)} placeholder="Routine title" value={dailyTitle} />
+            <h3>Create Daily Training</h3>
+            <p className="form-note">Build a repeatable training routine with named skills, a target enemy, and either a custom boss name or a generated one.</p>
+            <input onChange={(event) => setDailyTitle(event.target.value)} placeholder="Training title" value={dailyTitle} />
             <input min="0" onChange={(event) => setDailyXp(event.target.value)} placeholder="XP reward" type="number" value={dailyXp} />
             <div className="form-grid">
-              <input onChange={(event) => setDailyMonsterArt(event.target.value)} placeholder="Monster look (emoji or image URL)" value={dailyMonsterArt} />
-              <input min="1" onChange={(event) => setDailyMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={dailyMonsterHp} />
+              <input onChange={(event) => setDailyMonsterArt(event.target.value)} placeholder="Enemy look (emoji or image URL)" value={dailyMonsterArt} />
+              <input min="1" onChange={(event) => setDailyMonsterHp(event.target.value)} placeholder="Boss HP" type="number" value={dailyMonsterHp} />
             </div>
             <div className="monster-mode-row" role="group" aria-label="Daily monster naming">
               <button
@@ -1350,27 +1393,27 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                 onClick={() => setDailyMonsterMode('auto')}
                 type="button"
               >
-                Auto-generate Name
+                Auto-generate Boss
               </button>
               <button
                 className={`ghost-button ${dailyMonsterMode === 'custom' ? 'is-selected' : ''}`}
                 onClick={() => setDailyMonsterMode('custom')}
                 type="button"
               >
-                Name Monster Yourself
+                Name Boss Yourself
               </button>
             </div>
             {dailyMonsterMode === 'custom' ? (
-              <input onChange={(event) => setDailyMonsterName(event.target.value)} placeholder="Monster name" value={dailyMonsterName} />
+              <input onChange={(event) => setDailyMonsterName(event.target.value)} placeholder="Boss name" value={dailyMonsterName} />
             ) : (
-              <p className="form-helper">Monster preview: {autoGenerateMonsterName('daily', dailyTitle || 'daily quest')}</p>
+              <p className="form-helper">Boss preview: {autoGenerateMonsterName('daily', dailyTitle || 'daily quest')}</p>
             )}
             <div className="card-builder" aria-label="Daily quest cards">
               {dailyCards.map((card, index) => (
                 <div className="card-builder-row" key={card.id}>
                   <input
                     onChange={(event) => updateDraftCard(card.id, 'title', event.target.value, setDailyCards)}
-                    placeholder={`Card ${index + 1} title`}
+                    placeholder={`Skill ${index + 1} title`}
                     value={card.title}
                   />
                   <input
@@ -1381,7 +1424,7 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                   <input
                     min="1"
                     onChange={(event) => updateDraftCard(card.id, 'cardPower', event.target.value, setDailyCards)}
-                    placeholder="Damage"
+                    placeholder="Power"
                     type="number"
                     value={card.cardPower}
                   />
@@ -1391,7 +1434,7 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                 </div>
               ))}
               <button className="ghost-button add-card-button" onClick={() => addDraftCard(setDailyCards, '3')} type="button">
-                Add Card
+                Add Skill
               </button>
             </div>
             <div className="form-grid">
@@ -1414,24 +1457,24 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
               <input onChange={(event) => setDailyDeadlineAt(event.target.value)} type="date" value={dailyDeadlineAt} />
             ) : null}
             <button className="primary-button form-button" type="submit">
-              Add Daily Card Deck
+              Create Daily Training
             </button>
           </form>
         ) : null}
 
         {builderMode === 'side' ? (
           <form className="quest-form" onSubmit={addSideQuest}>
-            <h3>Add Side Quest</h3>
-            <p className="form-note">Give the quest a reward, add as many cards as you want, and choose whether the monster is custom or generated for you.</p>
-            <input onChange={(event) => setSideTitle(event.target.value)} placeholder="Quest title" value={sideTitle} />
+            <h3>Create Gate Mission</h3>
+            <p className="form-note">Set a gate reward, add your action list, and decide whether the dungeon boss is custom or generated.</p>
+            <input onChange={(event) => setSideTitle(event.target.value)} placeholder="Gate mission title" value={sideTitle} />
             <div className="form-grid">
               <input min="0" onChange={(event) => setSideXp(event.target.value)} placeholder="XP reward" type="number" value={sideXp} />
-              <input onChange={(event) => setSideDifficulty(event.target.value)} placeholder="Difficulty" value={sideDifficulty} />
+              <input onChange={(event) => setSideDifficulty(event.target.value)} placeholder="Gate rank" value={sideDifficulty} />
             </div>
-            <input onChange={(event) => setSideReward(event.target.value)} placeholder="Reward for completion" value={sideReward} />
+            <input onChange={(event) => setSideReward(event.target.value)} placeholder="Reward on clear" value={sideReward} />
             <div className="form-grid">
-              <input onChange={(event) => setSideMonsterArt(event.target.value)} placeholder="Monster look (emoji or image URL)" value={sideMonsterArt} />
-              <input min="1" onChange={(event) => setSideMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={sideMonsterHp} />
+              <input onChange={(event) => setSideMonsterArt(event.target.value)} placeholder="Boss look (emoji or image URL)" value={sideMonsterArt} />
+              <input min="1" onChange={(event) => setSideMonsterHp(event.target.value)} placeholder="Boss HP" type="number" value={sideMonsterHp} />
             </div>
             <div className="form-grid">
               <select onChange={(event) => setSideRecurrence(event.target.value as Recurrence)} value={sideRecurrence}>
@@ -1458,27 +1501,27 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                 onClick={() => setSideMonsterMode('auto')}
                 type="button"
               >
-                Auto-generate Monster
+                Auto-generate Boss
               </button>
               <button
                 className={`ghost-button ${sideMonsterMode === 'custom' ? 'is-selected' : ''}`}
                 onClick={() => setSideMonsterMode('custom')}
                 type="button"
               >
-                Name Monster Yourself
+                Name Boss Yourself
               </button>
             </div>
             {sideMonsterMode === 'custom' ? (
-              <input onChange={(event) => setSideMonsterName(event.target.value)} placeholder="Monster name" value={sideMonsterName} />
+              <input onChange={(event) => setSideMonsterName(event.target.value)} placeholder="Boss name" value={sideMonsterName} />
             ) : (
-              <p className="form-helper">Monster preview: {autoGenerateMonsterName('side', sideTitle || 'side quest')}</p>
+              <p className="form-helper">Boss preview: {autoGenerateMonsterName('side', sideTitle || 'side quest')}</p>
             )}
             <div className="card-builder" aria-label="Side quest cards">
               {sideCards.map((card, index) => (
                 <div className="card-builder-row" key={card.id}>
                   <input
                     onChange={(event) => updateDraftCard(card.id, 'title', event.target.value, setSideCards)}
-                    placeholder={`Card ${index + 1} title`}
+                    placeholder={`Skill ${index + 1} title`}
                     value={card.title}
                   />
                   <input
@@ -1489,7 +1532,7 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                   <input
                     min="1"
                     onChange={(event) => updateDraftCard(card.id, 'cardPower', event.target.value, setSideCards)}
-                    placeholder="Damage"
+                    placeholder="Power"
                     type="number"
                     value={card.cardPower}
                   />
@@ -1499,24 +1542,24 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                 </div>
               ))}
               <button className="ghost-button add-card-button" onClick={() => addDraftCard(setSideCards, '6')} type="button">
-                Add Card
+                Add Skill
               </button>
             </div>
             <button className="primary-button form-button" type="submit">
-              Add Side Quest
+              Create Gate Mission
             </button>
           </form>
         ) : null}
 
         {builderMode === 'main' ? (
           <form className="quest-form" onSubmit={addMainQuest}>
-            <h3>Add Main Quest</h3>
-            <p className="form-note">Create a larger boss battle with a completion reward and a full hand of cards.</p>
-            <input onChange={(event) => setMainTitle(event.target.value)} placeholder="Main quest title" value={mainTitle} />
-            <input onChange={(event) => setMainReward(event.target.value)} placeholder="Reward for completion" value={mainReward} />
+            <h3>Create Boss Raid</h3>
+            <p className="form-note">Set up a major raid target with a completion reward and a full hunter loadout.</p>
+            <input onChange={(event) => setMainTitle(event.target.value)} placeholder="Boss raid title" value={mainTitle} />
+            <input onChange={(event) => setMainReward(event.target.value)} placeholder="Reward on clear" value={mainReward} />
             <div className="form-grid">
-              <input onChange={(event) => setMainMonsterArt(event.target.value)} placeholder="Monster look (emoji or image URL)" value={mainMonsterArt} />
-              <input min="1" onChange={(event) => setMainMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={mainMonsterHp} />
+              <input onChange={(event) => setMainMonsterArt(event.target.value)} placeholder="Boss look (emoji or image URL)" value={mainMonsterArt} />
+              <input min="1" onChange={(event) => setMainMonsterHp(event.target.value)} placeholder="Boss HP" type="number" value={mainMonsterHp} />
             </div>
             <div className="form-grid">
               <select onChange={(event) => setMainRecurrence(event.target.value as Recurrence)} value={mainRecurrence}>
@@ -1543,27 +1586,27 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                 onClick={() => setMainMonsterMode('auto')}
                 type="button"
               >
-                Auto-generate Monster
+                Auto-generate Boss
               </button>
               <button
                 className={`ghost-button ${mainMonsterMode === 'custom' ? 'is-selected' : ''}`}
                 onClick={() => setMainMonsterMode('custom')}
                 type="button"
               >
-                Name Monster Yourself
+                Name Boss Yourself
               </button>
             </div>
             {mainMonsterMode === 'custom' ? (
-              <input onChange={(event) => setMainMonsterName(event.target.value)} placeholder="Monster name" value={mainMonsterName} />
+              <input onChange={(event) => setMainMonsterName(event.target.value)} placeholder="Boss name" value={mainMonsterName} />
             ) : (
-              <p className="form-helper">Monster preview: {autoGenerateMonsterName('main', mainTitle || 'main quest')}</p>
+              <p className="form-helper">Boss preview: {autoGenerateMonsterName('main', mainTitle || 'main quest')}</p>
             )}
             <div className="card-builder" aria-label="Main quest cards">
               {mainCards.map((card, index) => (
                 <div className="card-builder-row" key={card.id}>
                   <input
                     onChange={(event) => updateDraftCard(card.id, 'title', event.target.value, setMainCards)}
-                    placeholder={`Card ${index + 1} title`}
+                    placeholder={`Skill ${index + 1} title`}
                     value={card.title}
                   />
                   <input
@@ -1574,7 +1617,7 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                   <input
                     min="1"
                     onChange={(event) => updateDraftCard(card.id, 'cardPower', event.target.value, setMainCards)}
-                    placeholder="Damage"
+                    placeholder="Power"
                     type="number"
                     value={card.cardPower}
                   />
@@ -1584,11 +1627,11 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                 </div>
               ))}
               <button className="ghost-button add-card-button" onClick={() => addDraftCard(setMainCards, '10')} type="button">
-                Add Card
+                Add Skill
               </button>
             </div>
             <button className="primary-button form-button" type="submit">
-              Add Main Quest
+              Create Boss Raid
             </button>
           </form>
         ) : null}
@@ -1599,11 +1642,11 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
       <section className="section">
         <div className="section-heading">
           <button className="section-toggle" onClick={() => toggleSection('daily')} type="button">
-            <h2>Daily Routine Decks</h2>
+            <h2>Daily Training</h2>
             <span>{collapsedSections.daily ? 'Expand' : 'Collapse'}</span>
           </button>
           <span>
-            {completedCount} of {dailyQuests.length} decks cleared
+            {completedCount} of {dailyQuests.length} trainings cleared
           </span>
         </div>
         {!collapsedSections.daily ? (
@@ -1611,14 +1654,14 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
           {dailyQuests.map((quest) => (
             <article className="game-card list-card deck-card" key={quest.id}>
               <div className="battle-card-topline">
-                <span className="battle-card-type">daily deck</span>
+                <span className="battle-card-type">training</span>
                 <span className="battle-stat-chip">{quest.cards.reduce((total, card) => total + card.cardPower, 0)} dmg</span>
               </div>
               <div className="deck-card-body">
                 <div className="deck-card-copy">
                   <strong>{quest.title}</strong>
                   <small className="deck-card-meta">
-                    {quest.cards.length} cards
+                    {quest.cards.length} skills
                     <span aria-hidden="true">·</span>
                     +{quest.xp} XP
                     <span aria-hidden="true">·</span>
@@ -1640,13 +1683,13 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
               </div>
               {editingDailyId === quest.id ? (
                 <form className="quest-form edit-form" onSubmit={saveDailyQuestEdit}>
-                  <h3>Rename Daily Cards</h3>
-                  <p className="form-note">Edit card names below. You can also add more cards or change the rest of the deck settings here.</p>
-                  <input onChange={(event) => setEditingDailyTitle(event.target.value)} placeholder="Routine title" value={editingDailyTitle} />
+                  <h3>Edit Training Skills</h3>
+                  <p className="form-note">Edit skill names below. You can also add more skills or change the rest of the training setup here.</p>
+                  <input onChange={(event) => setEditingDailyTitle(event.target.value)} placeholder="Training title" value={editingDailyTitle} />
                   <input min="0" onChange={(event) => setEditingDailyXp(event.target.value)} placeholder="XP reward" type="number" value={editingDailyXp} />
                   <div className="form-grid">
-                    <input onChange={(event) => setEditingDailyMonsterArt(event.target.value)} placeholder="Monster look (emoji or image URL)" value={editingDailyMonsterArt} />
-                    <input min="1" onChange={(event) => setEditingDailyMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={editingDailyMonsterHp} />
+                    <input onChange={(event) => setEditingDailyMonsterArt(event.target.value)} placeholder="Boss look (emoji or image URL)" value={editingDailyMonsterArt} />
+                    <input min="1" onChange={(event) => setEditingDailyMonsterHp(event.target.value)} placeholder="Boss HP" type="number" value={editingDailyMonsterHp} />
                   </div>
                   <div className="monster-mode-row" role="group" aria-label="Edit daily monster naming">
                     <button
@@ -1654,27 +1697,27 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                       onClick={() => setEditingDailyMonsterMode('auto')}
                       type="button"
                     >
-                      Auto-generate Name
+                      Auto-generate Boss
                     </button>
                     <button
                       className={`ghost-button ${editingDailyMonsterMode === 'custom' ? 'is-selected' : ''}`}
                       onClick={() => setEditingDailyMonsterMode('custom')}
                       type="button"
                     >
-                      Name Monster Yourself
+                      Name Boss Yourself
                     </button>
                   </div>
                   {editingDailyMonsterMode === 'custom' ? (
-                    <input onChange={(event) => setEditingDailyMonsterName(event.target.value)} placeholder="Monster name" value={editingDailyMonsterName} />
+                    <input onChange={(event) => setEditingDailyMonsterName(event.target.value)} placeholder="Boss name" value={editingDailyMonsterName} />
                   ) : (
-                    <p className="form-helper">Monster preview: {autoGenerateMonsterName('daily', editingDailyTitle || 'daily quest')}</p>
+                    <p className="form-helper">Boss preview: {autoGenerateMonsterName('daily', editingDailyTitle || 'daily quest')}</p>
                   )}
                   <div className="card-builder" aria-label="Edit daily quest cards">
                     {editingDailyCards.map((card, index) => (
                       <div className="card-builder-row" key={card.id}>
                         <input
                           onChange={(event) => updateDraftCard(card.id, 'title', event.target.value, setEditingDailyCards)}
-                          placeholder={`Card ${index + 1} title`}
+                          placeholder={`Skill ${index + 1} title`}
                           value={card.title}
                         />
                         <input
@@ -1685,7 +1728,7 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                         <input
                           min="1"
                           onChange={(event) => updateDraftCard(card.id, 'cardPower', event.target.value, setEditingDailyCards)}
-                          placeholder="Damage"
+                          placeholder="Power"
                           type="number"
                           value={card.cardPower}
                         />
@@ -1695,7 +1738,7 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                       </div>
                     ))}
                     <button className="ghost-button add-card-button" onClick={() => addDraftCard(setEditingDailyCards, '3')} type="button">
-                      Add Another Card
+                      Add Another Skill
                     </button>
                   </div>
                   <div className="form-grid">
@@ -1729,10 +1772,10 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
               ) : null}
               <div className="card-actions">
                 <button className="ghost-button" onClick={() => setSelectedBoard({ kind: 'daily', questId: quest.id })} type="button">
-                  Open Battle
+                  Enter Raid
                 </button>
                 <button className="ghost-button card-rename-button" onClick={() => startEditingDailyQuest(quest)} type="button">
-                  Rename Cards
+                  Edit Skills
                 </button>
                 <button className="ghost-button danger-button" onClick={() => deleteDailyQuest(quest.id)} type="button">
                   Delete
@@ -1748,7 +1791,7 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
       <section className="section">
         <div className="section-heading">
           <button className="section-toggle" onClick={() => toggleSection('side')} type="button">
-            <h2>Side Quest Decks</h2>
+            <h2>Gate Missions</h2>
             <span>{collapsedSections.side ? 'Expand' : 'Collapse'}</span>
           </button>
           <span>Worth {sideQuestXp} bonus XP</span>
@@ -1761,7 +1804,7 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
             return (
               <article className="game-card list-card deck-card" key={quest.id}>
                 <div className="battle-card-topline">
-                  <span className="battle-card-type">side deck</span>
+                  <span className="battle-card-type">gate</span>
                   <span className="battle-stat-chip">{quest.xp ?? 0} xp</span>
                 </div>
                 <div className="deck-card-body">
@@ -1773,22 +1816,22 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                     <small className="quest-rule-copy">
                       {formatRecurrence(quest.recurrence)} <span aria-hidden="true">·</span> {formatDeadline(quest.deadlineType, quest.deadlineAt)}
                     </small>
-                    <p className="reward-pill">Reward: {quest.reward}</p>
+                    <p className="reward-pill">Clear reward: {quest.reward}</p>
                   </div>
                 </div>
                 {editingSideId === quest.id ? (
                   <form className="quest-form edit-form" onSubmit={saveSideQuestEdit}>
-                    <h3>Rename Side Quest Cards</h3>
-                    <p className="form-note">Edit card names below. You can also add more cards or change the rest of the quest settings here without losing current progress.</p>
-                    <input onChange={(event) => setEditingSideTitle(event.target.value)} placeholder="Quest title" value={editingSideTitle} />
+                    <h3>Edit Gate Skills</h3>
+                    <p className="form-note">Edit skill names below. You can also add more skills or change the rest of the mission setup here without losing progress.</p>
+                    <input onChange={(event) => setEditingSideTitle(event.target.value)} placeholder="Gate mission title" value={editingSideTitle} />
                     <div className="form-grid">
                       <input min="0" onChange={(event) => setEditingSideXp(event.target.value)} placeholder="XP reward" type="number" value={editingSideXp} />
-                      <input onChange={(event) => setEditingSideDifficulty(event.target.value)} placeholder="Difficulty" value={editingSideDifficulty} />
+                      <input onChange={(event) => setEditingSideDifficulty(event.target.value)} placeholder="Gate rank" value={editingSideDifficulty} />
                     </div>
-                    <input onChange={(event) => setEditingSideReward(event.target.value)} placeholder="Reward for completion" value={editingSideReward} />
+                    <input onChange={(event) => setEditingSideReward(event.target.value)} placeholder="Reward on clear" value={editingSideReward} />
                     <div className="form-grid">
-                      <input onChange={(event) => setEditingSideMonsterArt(event.target.value)} placeholder="Monster look (emoji or image URL)" value={editingSideMonsterArt} />
-                      <input min="1" onChange={(event) => setEditingSideMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={editingSideMonsterHp} />
+                      <input onChange={(event) => setEditingSideMonsterArt(event.target.value)} placeholder="Boss look (emoji or image URL)" value={editingSideMonsterArt} />
+                      <input min="1" onChange={(event) => setEditingSideMonsterHp(event.target.value)} placeholder="Boss HP" type="number" value={editingSideMonsterHp} />
                     </div>
                     <div className="form-grid">
                       <select onChange={(event) => setEditingSideRecurrence(event.target.value as Recurrence)} value={editingSideRecurrence}>
@@ -1815,27 +1858,27 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                         onClick={() => setEditingSideMonsterMode('auto')}
                         type="button"
                       >
-                        Auto-generate Monster
+                        Auto-generate Boss
                       </button>
                       <button
                         className={`ghost-button ${editingSideMonsterMode === 'custom' ? 'is-selected' : ''}`}
                         onClick={() => setEditingSideMonsterMode('custom')}
                         type="button"
                       >
-                        Name Monster Yourself
+                        Name Boss Yourself
                       </button>
                     </div>
                     {editingSideMonsterMode === 'custom' ? (
-                      <input onChange={(event) => setEditingSideMonsterName(event.target.value)} placeholder="Monster name" value={editingSideMonsterName} />
+                      <input onChange={(event) => setEditingSideMonsterName(event.target.value)} placeholder="Boss name" value={editingSideMonsterName} />
                     ) : (
-                      <p className="form-helper">Monster preview: {autoGenerateMonsterName('side', editingSideTitle || 'side quest')}</p>
+                      <p className="form-helper">Boss preview: {autoGenerateMonsterName('side', editingSideTitle || 'side quest')}</p>
                     )}
                     <div className="card-builder" aria-label="Edit side quest cards">
                       {editingSideCards.map((card, index) => (
                         <div className="card-builder-row" key={card.id}>
                           <input
                             onChange={(event) => updateDraftCard(card.id, 'title', event.target.value, setEditingSideCards)}
-                            placeholder={`Card ${index + 1} title`}
+                            placeholder={`Skill ${index + 1} title`}
                             value={card.title}
                           />
                           <input
@@ -1846,7 +1889,7 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                           <input
                             min="1"
                             onChange={(event) => updateDraftCard(card.id, 'cardPower', event.target.value, setEditingSideCards)}
-                            placeholder="Damage"
+                            placeholder="Power"
                             type="number"
                             value={card.cardPower}
                           />
@@ -1856,7 +1899,7 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                         </div>
                       ))}
                       <button className="ghost-button add-card-button" onClick={() => addDraftCard(setEditingSideCards, '6')} type="button">
-                        Add Another Card
+                        Add Another Skill
                       </button>
                     </div>
                     <div className="edit-form-actions">
@@ -1871,10 +1914,10 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                 ) : null}
                 <div className="card-actions">
                   <button className="ghost-button" onClick={() => setSelectedBoard({ kind: 'side', questId: quest.id })} type="button">
-                    Open Battle
+                    Enter Raid
                   </button>
                   <button className="ghost-button card-rename-button" onClick={() => startEditingSideQuest(quest)} type="button">
-                    Rename Cards
+                    Edit Skills
                   </button>
                   <button className="ghost-button danger-button" onClick={() => deleteQuest(quest.id, 'side', setSideQuests)} type="button">
                     Delete
@@ -1891,10 +1934,10 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
       <section className="section">
         <div className="section-heading">
           <button className="section-toggle" onClick={() => toggleSection('main')} type="button">
-            <h2>Main Quest Decks</h2>
+            <h2>Boss Raids</h2>
             <span>{collapsedSections.main ? 'Expand' : 'Collapse'}</span>
           </button>
-          <span>Story battles</span>
+          <span>Major raid encounters</span>
         </div>
         {!collapsedSections.main ? (
         <div className="card-stack">
@@ -1904,8 +1947,8 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
             return (
               <article className="game-card list-card deck-card" key={quest.id}>
                 <div className="battle-card-topline">
-                  <span className="battle-card-type">main deck</span>
-                  <span className="battle-stat-chip">{completion.objectiveCount} cards</span>
+                  <span className="battle-card-type">raid</span>
+                  <span className="battle-stat-chip">{completion.objectiveCount} skills</span>
                 </div>
                 <div className="deck-card-body">
                   <div className="deck-card-copy">
@@ -1914,18 +1957,18 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                     <small className="quest-rule-copy">
                       {formatRecurrence(quest.recurrence)} <span aria-hidden="true">·</span> {formatDeadline(quest.deadlineType, quest.deadlineAt)}
                     </small>
-                    <p className="reward-pill">Reward: {quest.reward}</p>
+                    <p className="reward-pill">Clear reward: {quest.reward}</p>
                   </div>
                 </div>
                 {editingMainId === quest.id ? (
                   <form className="quest-form edit-form" onSubmit={saveMainQuestEdit}>
-                    <h3>Rename Main Quest Cards</h3>
-                    <p className="form-note">Edit card names below. You can also add more cards or change the rest of the quest settings here without losing current progress.</p>
-                    <input onChange={(event) => setEditingMainTitle(event.target.value)} placeholder="Main quest title" value={editingMainTitle} />
-                    <input onChange={(event) => setEditingMainReward(event.target.value)} placeholder="Reward for completion" value={editingMainReward} />
+                    <h3>Edit Raid Skills</h3>
+                    <p className="form-note">Edit skill names below. You can also add more skills or change the rest of the raid setup here without losing progress.</p>
+                    <input onChange={(event) => setEditingMainTitle(event.target.value)} placeholder="Boss raid title" value={editingMainTitle} />
+                    <input onChange={(event) => setEditingMainReward(event.target.value)} placeholder="Reward on clear" value={editingMainReward} />
                     <div className="form-grid">
-                      <input onChange={(event) => setEditingMainMonsterArt(event.target.value)} placeholder="Monster look (emoji or image URL)" value={editingMainMonsterArt} />
-                      <input min="1" onChange={(event) => setEditingMainMonsterHp(event.target.value)} placeholder="Monster HP" type="number" value={editingMainMonsterHp} />
+                      <input onChange={(event) => setEditingMainMonsterArt(event.target.value)} placeholder="Boss look (emoji or image URL)" value={editingMainMonsterArt} />
+                      <input min="1" onChange={(event) => setEditingMainMonsterHp(event.target.value)} placeholder="Boss HP" type="number" value={editingMainMonsterHp} />
                     </div>
                     <div className="form-grid">
                       <select onChange={(event) => setEditingMainRecurrence(event.target.value as Recurrence)} value={editingMainRecurrence}>
@@ -1952,27 +1995,27 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                         onClick={() => setEditingMainMonsterMode('auto')}
                         type="button"
                       >
-                        Auto-generate Monster
+                        Auto-generate Boss
                       </button>
                       <button
                         className={`ghost-button ${editingMainMonsterMode === 'custom' ? 'is-selected' : ''}`}
                         onClick={() => setEditingMainMonsterMode('custom')}
                         type="button"
                       >
-                        Name Monster Yourself
+                        Name Boss Yourself
                       </button>
                     </div>
                     {editingMainMonsterMode === 'custom' ? (
-                      <input onChange={(event) => setEditingMainMonsterName(event.target.value)} placeholder="Monster name" value={editingMainMonsterName} />
+                      <input onChange={(event) => setEditingMainMonsterName(event.target.value)} placeholder="Boss name" value={editingMainMonsterName} />
                     ) : (
-                      <p className="form-helper">Monster preview: {autoGenerateMonsterName('main', editingMainTitle || 'main quest')}</p>
+                      <p className="form-helper">Boss preview: {autoGenerateMonsterName('main', editingMainTitle || 'main quest')}</p>
                     )}
                     <div className="card-builder" aria-label="Edit main quest cards">
                       {editingMainCards.map((card, index) => (
                         <div className="card-builder-row" key={card.id}>
                           <input
                             onChange={(event) => updateDraftCard(card.id, 'title', event.target.value, setEditingMainCards)}
-                            placeholder={`Card ${index + 1} title`}
+                            placeholder={`Skill ${index + 1} title`}
                             value={card.title}
                           />
                           <input
@@ -1983,7 +2026,7 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                           <input
                             min="1"
                             onChange={(event) => updateDraftCard(card.id, 'cardPower', event.target.value, setEditingMainCards)}
-                            placeholder="Damage"
+                            placeholder="Power"
                             type="number"
                             value={card.cardPower}
                           />
@@ -1993,7 +2036,7 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                         </div>
                       ))}
                       <button className="ghost-button add-card-button" onClick={() => addDraftCard(setEditingMainCards, '10')} type="button">
-                        Add Another Card
+                        Add Another Skill
                       </button>
                     </div>
                     <div className="edit-form-actions">
@@ -2008,10 +2051,10 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                 ) : null}
                 <div className="card-actions">
                   <button className="ghost-button" onClick={() => setSelectedBoard({ kind: 'main', questId: quest.id })} type="button">
-                    Open Battle
+                    Enter Raid
                   </button>
                   <button className="ghost-button card-rename-button" onClick={() => startEditingMainQuest(quest)} type="button">
-                    Rename Cards
+                    Edit Skills
                   </button>
                   <button className="ghost-button danger-button" onClick={() => deleteQuest(quest.id, 'main', setMainQuests)} type="button">
                     Delete
@@ -2028,17 +2071,17 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
       <section className="section">
         <div className="section-heading">
           <button className="section-toggle" onClick={() => toggleSection('history')} type="button">
-            <h2>Completed History</h2>
+            <h2>Raid Archive</h2>
             <span>{collapsedSections.history ? 'Expand' : 'Collapse'}</span>
           </button>
-          <span>{recentHistory.length} clears logged</span>
+          <span>{recentHistory.length} entries logged</span>
         </div>
         {!collapsedSections.history ? (
         <div className="card-stack">
           {recentHistory.length === 0 ? (
             <article className="game-card list-card history-card">
-              <strong>No completed quests yet</strong>
-              <small>When you clear or miss quests, the result and date will be saved here.</small>
+              <strong>No raid records yet</strong>
+              <small>When you clear or fail a mission, the result and date will be logged here.</small>
             </article>
           ) : (
             recentHistory.map((entry) => (
@@ -2056,8 +2099,8 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                 </div>
                 {editingHistoryId === entry.id ? (
                   <form className="quest-form edit-form" onSubmit={saveHistoryEntryEdit}>
-                    <h3>Edit Finished Quest</h3>
-                    <input onChange={(event) => setEditingHistoryTitle(event.target.value)} placeholder="Quest title" value={editingHistoryTitle} />
+                    <h3>Edit Raid Record</h3>
+                    <input onChange={(event) => setEditingHistoryTitle(event.target.value)} placeholder="Mission title" value={editingHistoryTitle} />
                     <input onChange={(event) => setEditingHistoryReward(event.target.value)} placeholder="Reward" value={editingHistoryReward} />
                     <div className="form-grid">
                       <input
@@ -2085,7 +2128,7 @@ function removeDraftCard(cardId: string, setter: Dispatch<SetStateAction<DraftCa
                 ) : null}
                 <div className="card-actions">
                   <button className="ghost-button" onClick={() => startEditingHistoryEntry(entry)} type="button">
-                    Edit Finished Quest
+                    Edit Record
                   </button>
                 </div>
               </article>
